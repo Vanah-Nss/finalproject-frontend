@@ -1,14 +1,7 @@
 import { ApolloClient, InMemoryCache, createHttpLink } from "@apollo/client";
+import { API_URL } from "./config";
 
-// Force l'URL en production
-const isProduction = window.location.hostname !== 'localhost';
-const API_URL = isProduction 
-  ? "https://finalproject-bu3e.onrender.com/api/graphql/"
-  : "http://127.0.0.1:8000/api/graphql/";
-
-console.log("🚀 API URL:", API_URL);
-console.log("🌍 Hostname:", window.location.hostname);
-console.log("📦 Is Production:", isProduction);
+console.log("🟢 apolloClient.js chargé avec URL:", API_URL);
 
 const httpLink = createHttpLink({
   uri: API_URL,
