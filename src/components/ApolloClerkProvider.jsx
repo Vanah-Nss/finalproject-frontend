@@ -4,8 +4,8 @@ import { setContext } from "@apollo/client/link/context";
 import { onError } from "@apollo/client/link/error";
 import { useSession } from "@clerk/clerk-react";
 
-const httpLink = createHttpLink({ uri: "http://localhost:8000/api/graphql/" });
-
+import { API_URL } from "../config";
+const httpLink = createHttpLink({ uri: API_URL });
 const errorLink = onError(({ graphQLErrors, networkError }) => {
   if (graphQLErrors) {
     graphQLErrors.forEach(({ message, extensions }) => {
