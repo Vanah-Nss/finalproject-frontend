@@ -137,7 +137,7 @@ function ImageGenerator({ setImageUrl, recaptchaToken, onRecaptchaChange }) {
 
   const handleGenerate = () => {
     if (!recaptchaToken) {
-      addToast("⚠️ ReCAPTCHA non validé ! Valide-le dans la section précédente.", "error");
+      addToast("⚠️ Valide le reCAPTCHA avant de générer !", "error");
       return;
     }
     if (!prompt.trim()) {
@@ -168,12 +168,14 @@ function ImageGenerator({ setImageUrl, recaptchaToken, onRecaptchaChange }) {
         <h4 className="font-semibold text-sm text-blue-900 mb-3 flex items-center gap-2">
           🔒 Vérification de sécurité
         </h4>
-        <p className="text-sm text-gray-600 mb-2">
-          Le reCAPTCHA doit être validé dans la section "Vérification" ci-dessous.
+        <ReCAPTCHA
+          ref={recaptchaRef}
+          sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
+          onChange={onRecaptchaChange}
+        />
+        <p className="text-xs text-gray-600 mt-2">
+          {recaptchaToken ? "✅ reCAPTCHA validé" : "⚠️ Valide le reCAPTCHA avant de générer l'image."}
         </p>
-        <div className="text-xs text-gray-600 p-2 bg-white rounded-lg">
-          {recaptchaToken ? "✅ ReCAPTCHA validé - Prêt pour la génération" : "⚠️ Valide d'abord le reCAPTCHA ci-dessous"}
-        </div>
       </div>
 
       <button 
@@ -213,11 +215,9 @@ export default function GenererPost() {
     setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 4000);
   };
 
-  const onRecaptchaChange = (token) => {
-    console.log("ReCAPTCHA token reçu:", token ? "valide" : "vide");
-    setRecaptchaToken(token || "");
-  };
+  const onRecaptchaChange = (token) => setRecaptchaToken(token || "");
 
+  // ✅ CORRECTION : Vérifier success avant d'accéder à post
   const [generatePostMutation] = useMutation(GENERATE_POST, {
     onCompleted: (data) => {
       if (data.generatePost.success && data.generatePost.post) {
@@ -243,7 +243,6 @@ export default function GenererPost() {
       setPostsHistory((prev) =>
         prev.map((p) => (p.id === updatedPost.id ? updatedPost : p))
       );
-      addToast("✅ Post publié avec succès !", "success");
     },
     onError: (error) => {
       console.error("Erreur publication:", error);
@@ -251,6 +250,7 @@ export default function GenererPost() {
     },
   });
 
+  // ✅ CORRECTION : Vérifier success avant d'accéder à post
   const [createPostMutation] = useMutation(CREATE_POST, {
     onCompleted: (data) => {
       if (data.createPost.success && data.createPost.post) {
@@ -267,7 +267,6 @@ export default function GenererPost() {
         setScheduledTime("");
         setTheme("");
         setTone("");
-        // NE PAS réinitialiser le recaptchaToken ici
       } else {
         addToast(data.createPost.message || "❌ Erreur lors de la création", "error");
       }
@@ -283,12 +282,10 @@ export default function GenererPost() {
 
   // Gestion de génération / sauvegarde
   const handleGenerate = async () => {
-    // Vérification conditionnelle du reCAPTCHA
-    if (useAIContent && useAI && !recaptchaToken) {
+    if (!recaptchaToken && useAIContent) {
       addToast("⚠️ Valide le reCAPTCHA avant d'envoyer !", "error");
       return;
     }
-    
     if (loading) return;
     setLoading(true);
 
@@ -341,7 +338,6 @@ export default function GenererPost() {
             setLoading(false);
             return;
           }
-          // Pour texte manuel, on peut envoyer sans recaptchaToken ou avec token vide
           await createPostMutation({ 
             variables: { 
               content: rawContent, 
@@ -352,13 +348,11 @@ export default function GenererPost() {
           });
         }
       } else {
-        // Contenu visuel uniquement
         if (!finalImageUrl) {
           addToast("⚠️ Vous devez générer ou uploader une image !", "error");
           setLoading(false);
           return;
         }
-        // Pour contenu visuel uniquement, pas besoin de recaptchaToken
         await createPostMutation({ 
           variables: { 
             content: "", 
@@ -387,17 +381,11 @@ export default function GenererPost() {
         content = `<p><strong>Thème :</strong> ${theme || "—"}</p>
                    <p><strong>Ton :</strong> ${tone || "—"}</p>
                    <p><strong>Longueur :</strong> ${length}</p>`;
-        if (finalImageUrl) {
-          content += `<p><strong>Image :</strong></p><img src="${finalImageUrl}" style="max-width:100%; border-radius:8px; margin-top:10px;" />`;
-        }
       } else if (editorRef.current) {
         content = editorRef.current.innerHTML || "";
-        if (finalImageUrl) {
-          content += `<img src="${finalImageUrl}" style="max-width:100%; border-radius:8px; margin-top:10px;" />`;
-        }
       }
     } else {
-      content = finalImageUrl ? `<p><strong>Image générée :</strong></p><img src="${finalImageUrl}" style="max-width:100%; border-radius:8px;" />` : "";
+      content = finalImageUrl ? `<p>Image :</p><img src="${finalImageUrl}" style="max-width:100%; border-radius:8px;" />` : "";
     }
 
     setPreviewContent(content);
@@ -424,12 +412,6 @@ export default function GenererPost() {
       console.error("Erreur publication:", err);
       addToast("❌ Erreur lors de la publication", "error");
     }
-  };
-
-  const resetRecaptcha = () => {
-    setRecaptchaToken("");
-    recaptchaRef.current?.reset();
-    addToast("ReCAPTCHA réinitialisé", "info");
   };
 
   return (
@@ -529,80 +511,29 @@ export default function GenererPost() {
       {!useAIContent && (
         <div className="bg-white p-6 rounded-2xl shadow-md border border-gray-100">
           <h3 className="font-semibold text-lg mb-4 text-gray-800">Générateur d'image IA</h3>
-          <ImageGenerator
-            setImageUrl={setImageUrl}
-            recaptchaToken={recaptchaToken}
-            onRecaptchaChange={onRecaptchaChange}
-          />
+       <ImageGenerator
+  setImageUrl={setImageUrl}
+  recaptchaToken={recaptchaToken}
+  onRecaptchaChange={onRecaptchaChange}
+/>
+
         </div>
       )}
 
-      {/* Upload d'image */}
-      <div className="bg-white p-6 rounded-2xl shadow-md border border-gray-100">
-        <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
-          <FiUpload /> Upload d'image
-        </h3>
-        <div className="flex flex-col sm:flex-row gap-4 items-center">
-          <input 
-            type="file" 
-            accept="image/*" 
-            onChange={(e) => {
-              if (e.target.files[0]) {
-                setImageFile(e.target.files[0]);
-                setImageUrl("");
-              }
-            }}
-            className="border border-gray-300 p-3 rounded-xl w-full shadow-sm"
-          />
-          <div className="text-sm text-gray-500">
-            {imageFile ? `✅ ${imageFile.name}` : "Aucun fichier sélectionné"}
-          </div>
-        </div>
-      </div>
-
-      {/* reCAPTCHA - Affiché UNIQUEMENT pour le contenu textuel avec IA */}
-      {useAIContent && useAI && (
+      {/* reCAPTCHA - Affiché UNIQUEMENT pour le contenu textuel */}
+      {useAIContent && (
         <div className="bg-white p-6 rounded-2xl shadow-md border border-gray-100">
-          <div className="flex justify-between items-center mb-3">
-            <h3 className="font-semibold text-lg flex items-center gap-2">
-              🔒 Vérification de sécurité
-            </h3>
-            {recaptchaToken && (
-              <button
-                onClick={resetRecaptcha}
-                className="text-sm text-rose-600 hover:text-rose-800 font-medium px-3 py-1 bg-rose-50 rounded-lg"
-              >
-                ↺ Réinitialiser
-              </button>
-            )}
-          </div>
+          <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
+            🔒 Vérification
+          </h3>
           <ReCAPTCHA
             ref={recaptchaRef}
             sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
             onChange={onRecaptchaChange}
-            onExpired={() => {
-              console.log("ReCAPTCHA expiré");
-              setRecaptchaToken("");
-              addToast("⚠️ ReCAPTCHA expiré, veuillez le valider à nouveau", "error");
-            }}
-            onErrored={() => {
-              console.log("Erreur ReCAPTCHA");
-              setRecaptchaToken("");
-              addToast("❌ Erreur avec le ReCAPTCHA", "error");
-            }}
           />
-          <div className="mt-3 p-3 rounded-lg bg-gray-50">
-            <p className="text-sm font-medium">
-              {recaptchaToken 
-                ? "✅ reCAPTCHA validé - Vous pouvez générer le post" 
-                : "⚠️ Valide le reCAPTCHA avant de générer."}
-            </p>
-            {recaptchaToken && (
-              <p className="text-xs text-gray-500 mt-1">
-                Ce token sera utilisé pour la génération de contenu IA
-              </p>
-            )}
-          </div>
+          <p className="text-xs text-gray-500 mt-2">
+            {recaptchaToken ? "✅ reCAPTCHA validé" : "⚠️ Valide le reCAPTCHA avant d'envoyer."}
+          </p>
         </div>
       )}
 
@@ -694,23 +625,20 @@ export default function GenererPost() {
               <div key={p.id} className="bg-white border border-gray-200 p-5 rounded-2xl shadow-md hover:shadow-lg transition-shadow flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div dangerouslySetInnerHTML={{ __html: p.content }} className="flex-1 prose max-w-none" />
                 {p.imageUrl && <img src={p.imageUrl} alt="" className="max-w-[150px] rounded-xl shadow-sm" />}
-                <div className="flex flex-col gap-2 mt-2 md:mt-0">
-                  <div className="text-xs text-gray-500 mb-1">
-                    Statut: <span className={`font-semibold ${p.status === 'Publié' ? 'text-emerald-600' : 'text-blue-600'}`}>{p.status}</span>
-                  </div>
+                <div className="flex gap-2 mt-2 md:mt-0">
                   {p.status !== "Publié" && (
                     <button 
                       onClick={() => handlePublish(p.id, p.content, p.imageUrl)} 
                       className="bg-emerald-500 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-emerald-600 transition-colors shadow-sm"
                     >
-                      ✓ Publier maintenant
+                      ✓ Publier
                     </button>
                   )}
                   <button 
                     onClick={() => copyContent(p.content)} 
                     className="bg-blue-50 text-blue-900 px-4 py-2 rounded-xl text-sm font-semibold hover:bg-blue-100 transition-colors shadow-sm"
                   >
-                    📋 Copier le contenu
+                    📋 Copier
                   </button>
                 </div>
               </div>
