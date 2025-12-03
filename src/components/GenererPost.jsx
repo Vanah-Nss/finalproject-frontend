@@ -224,6 +224,12 @@ export default function GenererPost() {
         const post = data.generatePost.post;
         setPostsHistory((prev) => [post, ...prev]);
         addToast("✨ Post IA généré avec succès !", "success");
+        
+        // Réinitialiser le reCAPTCHA
+        setRecaptchaToken("");
+        if (recaptchaRef.current) {
+          recaptchaRef.current.reset();
+        }
       } else {
         addToast(data.generatePost.message || "❌ Erreur de génération", "error");
       }
@@ -267,6 +273,12 @@ export default function GenererPost() {
         setScheduledTime("");
         setTheme("");
         setTone("");
+        
+        // Réinitialiser le reCAPTCHA
+        setRecaptchaToken("");
+        if (recaptchaRef.current) {
+          recaptchaRef.current.reset();
+        }
       } else {
         addToast(data.createPost.message || "❌ Erreur lors de la création", "error");
       }
@@ -282,7 +294,8 @@ export default function GenererPost() {
 
   // Gestion de génération / sauvegarde
   const handleGenerate = async () => {
-    if (!recaptchaToken && useAIContent) {
+    // Validation du reCAPTCHA selon le contexte
+    if (!recaptchaToken) {
       addToast("⚠️ Valide le reCAPTCHA avant d'envoyer !", "error");
       return;
     }
@@ -400,10 +413,10 @@ export default function GenererPost() {
     addToast("📋 Contenu copié !", "success");
   };
 
-  const handlePublish = async (id, content, imageUrl) => {
+  const handlePublish = async (id, content) => {
     try {
       const textOnly = content.replace(/<[^>]*>?/gm, "").trim();
-      const linkedInUrl = textOnly 
+      const linkedInUrl = textOnly
         ? `https://www.linkedin.com/feed/?shareActive=true&text=${encodeURIComponent(textOnly)}`
         : "https://www.linkedin.com/feed/";
       window.open(linkedInUrl, "_blank", "width=800,height=600");
@@ -511,31 +524,29 @@ export default function GenererPost() {
       {!useAIContent && (
         <div className="bg-white p-6 rounded-2xl shadow-md border border-gray-100">
           <h3 className="font-semibold text-lg mb-4 text-gray-800">Générateur d'image IA</h3>
-       <ImageGenerator
-  setImageUrl={setImageUrl}
-  recaptchaToken={recaptchaToken}
-  onRecaptchaChange={onRecaptchaChange}
-/>
-
-        </div>
-      )}
-
-      {/* reCAPTCHA - Affiché UNIQUEMENT pour le contenu textuel */}
-      {useAIContent && (
-        <div className="bg-white p-6 rounded-2xl shadow-md border border-gray-100">
-          <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
-            🔒 Vérification
-          </h3>
-          <ReCAPTCHA
-            ref={recaptchaRef}
-            sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
-            onChange={onRecaptchaChange}
+          <ImageGenerator
+            setImageUrl={setImageUrl}
+            recaptchaToken={recaptchaToken}
+            onRecaptchaChange={onRecaptchaChange}
           />
-          <p className="text-xs text-gray-500 mt-2">
-            {recaptchaToken ? "✅ reCAPTCHA validé" : "⚠️ Valide le reCAPTCHA avant d'envoyer."}
-          </p>
         </div>
       )}
+
+      {/* reCAPTCHA - Affiché pour TOUS les types de contenu */}
+      <div className="bg-white p-6 rounded-2xl shadow-md border border-gray-100">
+        <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
+          🔒 Vérification de sécurité
+        </h3>
+        <ReCAPTCHA
+          ref={recaptchaRef}
+          sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
+          onChange={onRecaptchaChange}
+        />
+        <p className="text-xs text-gray-500 mt-2">
+          {recaptchaToken ? "✅ reCAPTCHA validé" : "⚠️ Valide le reCAPTCHA avant d'enregistrer."}
+        </p>
+      </div>
+
 
       {/* Planification */}
       <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-2xl shadow-md border border-blue-100">
@@ -594,12 +605,12 @@ export default function GenererPost() {
         )}
       </div>
 
-      <button 
-        onClick={handleGenerate} 
-        disabled={loading} 
+      <button
+        onClick={handleGenerate}
+        disabled={loading || !recaptchaToken}
         className="w-full bg-blue-900 text-white px-6 py-4 rounded-xl font-bold shadow-lg hover:bg-blue-950 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-lg"
       >
-        {loading ? "⏳ Génération en cours..." : "✨ Générer / Enregistrer le post"}
+        {loading ? "⏳ Génération en cours..." : !recaptchaToken ? "⚠️ Valide le reCAPTCHA d'abord" : "✨ Générer / Enregistrer le post"}
       </button>
 
       {/* Prévisualisation */}
@@ -627,8 +638,8 @@ export default function GenererPost() {
                 {p.imageUrl && <img src={p.imageUrl} alt="" className="max-w-[150px] rounded-xl shadow-sm" />}
                 <div className="flex gap-2 mt-2 md:mt-0">
                   {p.status !== "Publié" && (
-                    <button 
-                      onClick={() => handlePublish(p.id, p.content, p.imageUrl)} 
+                    <button
+                      onClick={() => handlePublish(p.id, p.content)}
                       className="bg-emerald-500 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-emerald-600 transition-colors shadow-sm"
                     >
                       ✓ Publier
