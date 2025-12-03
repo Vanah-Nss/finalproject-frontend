@@ -178,9 +178,9 @@ function ImageGenerator({ setImageUrl, recaptchaToken, onRecaptchaChange }) {
         </p>
       </div>
 
-      <button 
-        onClick={handleGenerate} 
-        disabled={loading || !recaptchaToken} 
+      <button
+        onClick={handleGenerate}
+        disabled={loading || !recaptchaToken}
         className="bg-blue-900 text-white px-5 py-3 rounded-xl hover:bg-blue-950 shadow-md font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {loading ? "⏳ Génération en cours..." : "✨ Générer l'image"}
@@ -229,7 +229,7 @@ export default function GenererPost() {
         setPostsHistory((prev) => [post, ...prev]);
         addToast("✨ Post IA généré avec succès !", "success");
         
-        // Réinitialiser le reCAPTCHA APRÈS succès
+        // Réinitialiser le reCAPTCHA
         setTimeout(() => {
           setRecaptchaToken("");
           if (recaptchaRef.current) {
@@ -282,7 +282,7 @@ export default function GenererPost() {
         setTheme("");
         setTone("");
         
-        // Réinitialiser le reCAPTCHA APRÈS succès
+        // Réinitialiser le reCAPTCHA
         setTimeout(() => {
           setRecaptchaToken("");
           if (recaptchaRef.current) {
@@ -305,14 +305,12 @@ export default function GenererPost() {
 
   // Gestion de génération / sauvegarde
   const handleGenerate = async () => {
-    // Validation du reCAPTCHA selon le contexte
     if (!recaptchaToken) {
       addToast("⚠️ Valide le reCAPTCHA avant d'envoyer !", "error");
       return;
     }
     
-    // Log pour debug
-    console.log("🔐 Token reCAPTCHA:", recaptchaToken.substring(0, 20) + "...");
+    console.log("🔐 Token reCAPTCHA v2:", recaptchaToken.substring(0, 20) + "...");
     
     if (loading) return;
     setLoading(true);
