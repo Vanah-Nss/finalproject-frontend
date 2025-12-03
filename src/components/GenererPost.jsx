@@ -215,7 +215,10 @@ export default function GenererPost() {
     setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 4000);
   };
 
-  const onRecaptchaChange = (token) => setRecaptchaToken(token || "");
+  const onRecaptchaChange = (token) => {
+    console.log("✅ reCAPTCHA validé, token reçu:", token ? token.substring(0, 20) + "..." : "null");
+    setRecaptchaToken(token || "");
+  };
 
   // ✅ CORRECTION : Vérifier success avant d'accéder à post
   const [generatePostMutation] = useMutation(GENERATE_POST, {
@@ -236,7 +239,9 @@ export default function GenererPost() {
       setLoading(false);
     },
     onError: (error) => {
-      console.error("Erreur generatePost:", error);
+      console.error("❌ Erreur generatePost:", error);
+      console.error("GraphQL Errors:", error.graphQLErrors);
+      console.error("Network Error:", error.networkError);
       const errorMessage = error.graphQLErrors?.[0]?.message || error.message;
       addToast(`❌ ${errorMessage}`, "error");
       setLoading(false);
@@ -285,7 +290,9 @@ export default function GenererPost() {
       setLoading(false);
     },
     onError: (error) => {
-      console.error("Erreur createPost:", error);
+      console.error("❌ Erreur createPost:", error);
+      console.error("GraphQL Errors:", error.graphQLErrors);
+      console.error("Network Error:", error.networkError);
       const errorMessage = error.graphQLErrors?.[0]?.message || error.message;
       addToast(`❌ ${errorMessage}`, "error");
       setLoading(false);
@@ -299,6 +306,10 @@ export default function GenererPost() {
       addToast("⚠️ Valide le reCAPTCHA avant d'envoyer !", "error");
       return;
     }
+    
+    // Log pour debug
+    console.log("🔐 Token reCAPTCHA:", recaptchaToken.substring(0, 20) + "...");
+    
     if (loading) return;
     setLoading(true);
 
@@ -334,15 +345,18 @@ export default function GenererPost() {
             setLoading(false);
             return;
           }
-          await generatePostMutation({ 
-            variables: { 
-              theme, 
-              tone: tone || null, 
-              length, 
-              imageUrl: finalImageUrl, 
-              scheduledAt, 
-              recaptchaToken: recaptchaToken || ""
-            } 
+          
+          console.log("📤 Envoi generatePost avec token:", recaptchaToken.substring(0, 20) + "...");
+          
+          await generatePostMutation({
+            variables: {
+              theme,
+              tone: tone || null,
+              length,
+              imageUrl: finalImageUrl,
+              scheduledAt,
+              recaptchaToken: recaptchaToken
+            }
           });
         } else {
           const rawContent = editorRef.current?.innerHTML || "";
@@ -351,13 +365,16 @@ export default function GenererPost() {
             setLoading(false);
             return;
           }
-          await createPostMutation({ 
-            variables: { 
-              content: rawContent, 
-              imageUrl: finalImageUrl, 
-              scheduledAt, 
-              recaptchaToken: recaptchaToken || ""
-            } 
+          
+          console.log("📤 Envoi createPost avec token:", recaptchaToken.substring(0, 20) + "...");
+          
+          await createPostMutation({
+            variables: {
+              content: rawContent,
+              imageUrl: finalImageUrl,
+              scheduledAt,
+              recaptchaToken: recaptchaToken
+            }
           });
         }
       } else {
@@ -366,13 +383,16 @@ export default function GenererPost() {
           setLoading(false);
           return;
         }
-        await createPostMutation({ 
-          variables: { 
-            content: "", 
-            imageUrl: finalImageUrl, 
-            scheduledAt, 
-            recaptchaToken: recaptchaToken || ""
-          } 
+        
+        console.log("📤 Envoi createPost (visuel) avec token:", recaptchaToken.substring(0, 20) + "...");
+        
+        await createPostMutation({
+          variables: {
+            content: "",
+            imageUrl: finalImageUrl,
+            scheduledAt,
+            recaptchaToken: recaptchaToken
+          }
         });
       }
 
