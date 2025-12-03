@@ -13,26 +13,12 @@ import {
 } from "react-icons/fi";
 import ReCAPTCHA from "react-google-recaptcha";
 
-console.log("🔑 VITE_RECAPTCHA_SITE_KEY:", import.meta.env.VITE_RECAPTCHA_SITE_KEY);
-console.log("🌐 VITE_API_URL:", import.meta.env.VITE_API_URL);
-
 // GraphQL
-const ALL_POSTS = gql`
-  query {
-    myPosts {
-      id
-      content
-      status
-      imageUrl
-      createdAt
-      scheduledAt
-    }
-  }
-`;
-
 const CREATE_POST = gql`
   mutation CreatePost($content: String!, $imageUrl: String, $scheduledAt: String, $recaptchaToken: String!) {
     createPost(content: $content, imageUrl: $imageUrl, scheduledAt: $scheduledAt, recaptchaToken: $recaptchaToken) {
+      success
+      message
       post {
         id
         content
@@ -62,6 +48,8 @@ const GENERATE_POST = gql`
       scheduledAt: $scheduledAt
       recaptchaToken: $recaptchaToken
     ) {
+      success
+      message
       post {
         id
         content
@@ -134,7 +122,7 @@ function ImageGenerator({ setImageUrl, recaptchaToken, onRecaptchaChange }) {
     onCompleted: (data) => {
       if (data.generateImage.success) {
         setImageUrl(data.generateImage.imageUrl);
-        addToast(" Image générée avec succès !", "success");
+        addToast("✨ Image générée avec succès !", "success");
       } else {
         addToast(`❌ ${data.generateImage.message}`, "error");
       }
@@ -201,7 +189,6 @@ function ImageGenerator({ setImageUrl, recaptchaToken, onRecaptchaChange }) {
   );
 }
 
-
 // Main Component
 export default function GenererPost() {
   const recaptchaRef = useRef(null);
@@ -230,20 +217,22 @@ export default function GenererPost() {
 
   const onRecaptchaChange = (token) => setRecaptchaToken(token || "");
 
+  // ✅ CORRECTION : Vérifier success avant d'accéder à post
   const [generatePostMutation] = useMutation(GENERATE_POST, {
     onCompleted: (data) => {
-      const post = data.generatePost.post;
-      setPostsHistory((prev) => [post, ...prev]);
-      addToast("✨ Post IA généré avec succès !", "success");
+      if (data.generatePost.success && data.generatePost.post) {
+        const post = data.generatePost.post;
+        setPostsHistory((prev) => [post, ...prev]);
+        addToast("✨ Post IA généré avec succès !", "success");
+      } else {
+        addToast(data.generatePost.message || "❌ Erreur de génération", "error");
+      }
       setLoading(false);
     },
     onError: (error) => {
-      console.error("Erreur generatePost complète:", error);
-      console.error("Détails GraphQL:", error.graphQLErrors);
-      console.error("Network error:", error.networkError);
-      
+      console.error("Erreur generatePost:", error);
       const errorMessage = error.graphQLErrors?.[0]?.message || error.message;
-      addToast(`❌ Impossible de générer le post: ${errorMessage}`, "error");
+      addToast(`❌ ${errorMessage}`, "error");
       setLoading(false);
     },
   });
@@ -261,34 +250,39 @@ export default function GenererPost() {
     },
   });
 
+  // ✅ CORRECTION : Vérifier success avant d'accéder à post
   const [createPostMutation] = useMutation(CREATE_POST, {
     onCompleted: (data) => {
-      const post = data.createPost.post;
-      setPostsHistory((prev) => [post, ...prev]);
-      addToast(post.scheduledAt ? "📅 Post programmé !" : " Post enregistré !", "success");
-      if (editorRef.current) editorRef.current.innerHTML = "";
-      setImageFile(null);
-      setImageUrl("");
-      setScheduled(false);
-      setScheduledDate("");
-      setScheduledTime("");
+      if (data.createPost.success && data.createPost.post) {
+        const post = data.createPost.post;
+        setPostsHistory((prev) => [post, ...prev]);
+        addToast(post.scheduledAt ? "📅 Post programmé !" : "✅ Post enregistré !", "success");
+        
+        // Réinitialisation du formulaire
+        if (editorRef.current) editorRef.current.innerHTML = "";
+        setImageFile(null);
+        setImageUrl("");
+        setScheduled(false);
+        setScheduledDate("");
+        setScheduledTime("");
+        setTheme("");
+        setTone("");
+      } else {
+        addToast(data.createPost.message || "❌ Erreur lors de la création", "error");
+      }
       setLoading(false);
     },
     onError: (error) => {
-      console.error("Erreur createPost complète:", error);
-      console.error("Détails de l'erreur:", error.graphQLErrors);
-      console.error("Network error:", error.networkError);
-      
-      // Afficher le message d'erreur détaillé
+      console.error("Erreur createPost:", error);
       const errorMessage = error.graphQLErrors?.[0]?.message || error.message;
-      addToast(`❌ Impossible d'enregistrer le post: ${errorMessage}`, "error");
+      addToast(`❌ ${errorMessage}`, "error");
       setLoading(false);
     },
   });
 
   // Gestion de génération / sauvegarde
   const handleGenerate = async () => {
-    if (!recaptchaToken) {
+    if (!recaptchaToken && useAIContent) {
       addToast("⚠️ Valide le reCAPTCHA avant d'envoyer !", "error");
       return;
     }
@@ -320,17 +314,6 @@ export default function GenererPost() {
         finalImageUrl = data.url;
       }
 
-      console.log(" Envoi des données:", {
-        useAIContent,
-        useAI,
-        theme,
-        tone,
-        length,
-        finalImageUrl,
-        scheduledAt,
-        recaptchaToken: recaptchaToken ? "✅ Present" : "❌ Missing"
-      });
-
       if (useAIContent) {
         if (useAI) {
           if (!theme?.trim()) {
@@ -338,7 +321,6 @@ export default function GenererPost() {
             setLoading(false);
             return;
           }
-          console.log("🤖 Génération IA avec:", { theme, tone, length, imageUrl: finalImageUrl, scheduledAt });
           await generatePostMutation({ 
             variables: { 
               theme, 
@@ -346,23 +328,22 @@ export default function GenererPost() {
               length, 
               imageUrl: finalImageUrl, 
               scheduledAt, 
-              recaptchaToken 
+              recaptchaToken: recaptchaToken || ""
             } 
           });
         } else {
-          const rawContent = editorRef.current?.innerHTML;
-          if (!rawContent?.trim()) {
-            addToast("Le texte manuel ne peut pas être vide !", "error");
+          const rawContent = editorRef.current?.innerHTML || "";
+          if (!rawContent.trim() && !finalImageUrl) {
+            addToast("Le texte ou une image est obligatoire !", "error");
             setLoading(false);
             return;
           }
-          console.log("Création post manuel avec:", { content: rawContent, imageUrl: finalImageUrl, scheduledAt });
           await createPostMutation({ 
             variables: { 
               content: rawContent, 
               imageUrl: finalImageUrl, 
               scheduledAt, 
-              recaptchaToken 
+              recaptchaToken: recaptchaToken || ""
             } 
           });
         }
@@ -372,30 +353,23 @@ export default function GenererPost() {
           setLoading(false);
           return;
         }
-        console.log(" Création post image seule avec:", { imageUrl: finalImageUrl, scheduledAt });
         await createPostMutation({ 
           variables: { 
-            content: " ", // Espace au lieu de chaîne vide
+            content: "", 
             imageUrl: finalImageUrl, 
             scheduledAt, 
-            recaptchaToken 
+            recaptchaToken: recaptchaToken || ""
           } 
         });
       }
 
     } catch (err) {
       console.error("❌ Erreur handleGenerate:", err);
-      console.error("Détails:", err.graphQLErrors || err.networkError);
-      addToast(`❌ ${err.message || "Impossible de générer le post."}`, "error");
-    } finally {
+      const errorMsg = err.graphQLErrors?.[0]?.message || err.message || "Erreur inconnue";
+      addToast(`❌ ${errorMsg}`, "error");
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    console.log("🔑 reCAPTCHA key:", import.meta.env.VITE_RECAPTCHA_SITE_KEY);
-    console.log("🌐 API URL:", import.meta.env.VITE_API_URL);
-  }, []);
 
   // Prévisualisation
   useEffect(() => {
@@ -423,7 +397,7 @@ export default function GenererPost() {
 
   const copyContent = (content) => {
     navigator.clipboard.writeText(content);
-    addToast(" Contenu copié !", "success");
+    addToast("📋 Contenu copié !", "success");
   };
 
   const handlePublish = async (id, content, imageUrl) => {
@@ -459,28 +433,27 @@ export default function GenererPost() {
           className={`px-6 py-3 rounded-xl font-semibold shadow-sm transition-all ${useAIContent ? "bg-blue-900 text-white" : "bg-blue-50 text-blue-900 hover:bg-blue-100"}`}
           onClick={() => setUseAIContent(true)}
         >
-          Contenu Textuel
+          📝 Contenu Textuel
         </button>
         <button
           className={`px-6 py-3 rounded-xl font-semibold shadow-sm transition-all ${!useAIContent ? "bg-blue-900 text-white" : "bg-blue-50 text-blue-900 hover:bg-blue-100"}`}
           onClick={() => setUseAIContent(false)}
         >
-           Contenu Visuel
+          🖼️ Contenu Visuel
         </button>
       </div>
 
       {/* Contenu textuel */}
       {useAIContent && (
         <div className="mt-6 bg-white p-6 rounded-2xl shadow-md border border-gray-100">
-          {/* IA ou manuel */}
           <div className="flex gap-6">
             <label className="flex items-center gap-2 cursor-pointer">
               <input type="radio" checked={useAI} onChange={() => setUseAI(true)} className="w-4 h-4 text-blue-900" />
-              <span className="font-medium">Avec IA</span>
+              <span className="font-medium">🤖 Avec IA</span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer">
               <input type="radio" checked={!useAI} onChange={() => setUseAI(false)} className="w-4 h-4 text-blue-900" />
-              <span className="font-medium">Texte manuel</span>
+              <span className="font-medium">✍️ Texte manuel</span>
             </label>
           </div>
 
@@ -488,7 +461,7 @@ export default function GenererPost() {
             <div className="flex flex-col md:flex-row gap-4 mt-4">
               <input 
                 type="text" 
-                placeholder="Thème" 
+                placeholder="Thème (ex: IA dans l'éducation)" 
                 value={theme} 
                 onChange={(e) => setTheme(e.target.value)} 
                 className="border border-gray-300 p-3 rounded-xl flex-1 shadow-sm focus:ring-2 focus:ring-blue-900 focus:border-transparent" 
@@ -563,7 +536,7 @@ export default function GenererPost() {
         </div>
       )}
 
-      {/* Planification - Stylisée avec icônes */}
+      {/* Planification */}
       <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-2xl shadow-md border border-blue-100">
         <div className="flex items-center gap-3 mb-4">
           <FiCalendar className="text-blue-900 text-2xl" />
@@ -578,7 +551,7 @@ export default function GenererPost() {
               onChange={(e) => setScheduled(e.target.checked)} 
               className="w-4 h-4 text-blue-900"
             />
-            <span className="font-medium text-gray-700"> 📅 Programmer ce post</span>
+            <span className="font-medium text-gray-700">📅 Programmer ce post</span>
           </label>
           
           {scheduled && (
@@ -637,7 +610,7 @@ export default function GenererPost() {
             onClick={() => copyContent(previewContent)} 
             className="mt-4 text-sm text-blue-900 font-semibold bg-white px-4 py-2 rounded-lg hover:bg-blue-50 transition-colors shadow-sm"
           >
-             Copier le contenu
+            📋 Copier le contenu
           </button>
         </div>
       )}
@@ -645,14 +618,14 @@ export default function GenererPost() {
       {/* Historique */}
       {postsHistory.length > 0 && (
         <div className="mt-8">
-          <h3 className="font-bold text-2xl mb-4 text-gray-800">Historique des posts</h3>
+          <h3 className="font-bold text-2xl mb-4 text-gray-800">📚 Historique des posts</h3>
           <div className="space-y-4">
             {postsHistory.map((p) => (
               <div key={p.id} className="bg-white border border-gray-200 p-5 rounded-2xl shadow-md hover:shadow-lg transition-shadow flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div dangerouslySetInnerHTML={{ __html: p.content }} className="flex-1 prose max-w-none" />
                 {p.imageUrl && <img src={p.imageUrl} alt="" className="max-w-[150px] rounded-xl shadow-sm" />}
                 <div className="flex gap-2 mt-2 md:mt-0">
-                  {p.status !== "published" && (
+                  {p.status !== "Publié" && (
                     <button 
                       onClick={() => handlePublish(p.id, p.content, p.imageUrl)} 
                       className="bg-emerald-500 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-emerald-600 transition-colors shadow-sm"
@@ -664,7 +637,7 @@ export default function GenererPost() {
                     onClick={() => copyContent(p.content)} 
                     className="bg-blue-50 text-blue-900 px-4 py-2 rounded-xl text-sm font-semibold hover:bg-blue-100 transition-colors shadow-sm"
                   >
-                     Copier
+                    📋 Copier
                   </button>
                 </div>
               </div>
