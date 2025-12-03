@@ -161,7 +161,7 @@ function ImageGenerator({ setImageUrl, recaptchaToken, onRecaptchaChange }) {
   };
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-4">
       <div className="fixed top-5 right-5 left-5 md:left-auto md:w-96 flex flex-col items-stretch z-50">
         {toasts.map((t) => (
           <Toast key={t.id} message={t.message} type={t.type} onClose={() => setToasts((prev) => prev.filter((x) => x.id !== t.id))} />
@@ -172,16 +172,30 @@ function ImageGenerator({ setImageUrl, recaptchaToken, onRecaptchaChange }) {
         type="text"
         value={prompt}
         onChange={(e) => setPrompt(e.target.value)}
-        placeholder="Tape ton prompt ici"
-        className="border p-3 rounded-2xl shadow-sm w-full focus:ring-2 focus:ring-blue-900 focus:border-transparent"
+        placeholder="Tape ton prompt ici (ex: une plage au coucher du soleil)"
+        className="border border-gray-300 p-3 rounded-2xl shadow-sm w-full focus:ring-2 focus:ring-blue-900 focus:border-transparent"
       />
+
+      <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
+        <h4 className="font-semibold text-sm text-blue-900 mb-3 flex items-center gap-2">
+          🔒 Vérification de sécurité
+        </h4>
+        <ReCAPTCHA
+          ref={recaptchaRef}
+          sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
+          onChange={onRecaptchaChange}
+        />
+        <p className="text-xs text-gray-600 mt-2">
+          {recaptchaToken ? "✅ reCAPTCHA validé" : "⚠️ Valide le reCAPTCHA avant de générer l'image."}
+        </p>
+      </div>
 
       <button 
         onClick={handleGenerate} 
-        disabled={loading} 
-        className="bg-blue-900 text-white px-5 py-2.5 rounded-xl hover:bg-blue-950 shadow-md font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+        disabled={loading || !recaptchaToken} 
+        className="bg-blue-900 text-white px-5 py-3 rounded-xl hover:bg-blue-950 shadow-md font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {loading ? "⏳ Génération..." : "✨ Générer l'image"}
+        {loading ? "⏳ Génération en cours..." : "✨ Générer l'image"}
       </button>
     </div>
   );
@@ -476,6 +490,7 @@ export default function GenererPost() {
       {/* Contenu visuel */}
       {!useAIContent && (
         <div className="bg-white p-6 rounded-2xl shadow-md border border-gray-100">
+          <h3 className="font-semibold text-lg mb-4 text-gray-800">🎨 Générateur d'image IA</h3>
           <ImageGenerator 
             setImageUrl={setImageUrl} 
             recaptchaToken={recaptchaToken}
@@ -484,10 +499,12 @@ export default function GenererPost() {
         </div>
       )}
 
-      {/* reCAPTCHA - Affiché pour le contenu textuel */}
+      {/* reCAPTCHA - Affiché UNIQUEMENT pour le contenu textuel */}
       {useAIContent && (
         <div className="bg-white p-6 rounded-2xl shadow-md border border-gray-100">
-          <h3 className="font-semibold text-lg mb-3">🔒 Vérification de sécurité</h3>
+          <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
+            🔒 Vérification de sécurité
+          </h3>
           <ReCAPTCHA
             ref={recaptchaRef}
             sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
