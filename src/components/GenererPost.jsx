@@ -8,10 +8,14 @@ import {
   FiItalic,
   FiUnderline,
   FiList,
+  FiCalendar,
+  FiClock,
 } from "react-icons/fi";
 import ReCAPTCHA from "react-google-recaptcha";
+
 console.log("🔑 VITE_RECAPTCHA_SITE_KEY:", import.meta.env.VITE_RECAPTCHA_SITE_KEY);
 console.log("🌐 VITE_API_URL:", import.meta.env.VITE_API_URL);
+
 // GraphQL
 const ALL_POSTS = gql`
   query {
@@ -114,12 +118,11 @@ function Toast({ message, type, onClose }) {
 }
 
 // Image Generator
-function ImageGenerator({ setImageUrl }) {
+function ImageGenerator({ setImageUrl, recaptchaToken, onRecaptchaChange }) {
   const [prompt, setPrompt] = useState("");
   const [loading, setLoading] = useState(false);
   const [toasts, setToasts] = useState([]);
   const recaptchaRef = useRef(null);
-  const [recaptchaToken, setRecaptchaToken] = useState("");
 
   const addToast = (message, type) => {
     const id = Date.now();
@@ -170,20 +173,13 @@ function ImageGenerator({ setImageUrl }) {
         value={prompt}
         onChange={(e) => setPrompt(e.target.value)}
         placeholder="Tape ton prompt ici"
-        className="border p-3 rounded-2xl shadow-sm w-full"
+        className="border p-3 rounded-2xl shadow-sm w-full focus:ring-2 focus:ring-blue-900 focus:border-transparent"
       />
-
-      <ReCAPTCHA
-        ref={recaptchaRef}
-        sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
-        onChange={(token) => setRecaptchaToken(token || "")}
-      />
-      <p className="text-xs text-gray-500 mt-2">{recaptchaToken ? "✅ reCAPTCHA validé" : "⚠️ Valide le reCAPTCHA avant d'envoyer."}</p>
 
       <button 
         onClick={handleGenerate} 
         disabled={loading} 
-        className="bg-blue-900 text-white px-5 py-2.5 rounded-xl hover:bg-blue-950 shadow-md font-semibold transition-all duration-200"
+        className="bg-blue-900 text-white px-5 py-2.5 rounded-xl hover:bg-blue-950 shadow-md font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {loading ? "⏳ Génération..." : "✨ Générer l'image"}
       </button>
@@ -334,10 +330,12 @@ export default function GenererPost() {
       setLoading(false);
     }
   };
+
   useEffect(() => {
     console.log("🔑 reCAPTCHA key:", import.meta.env.VITE_RECAPTCHA_SITE_KEY);
     console.log("🌐 API URL:", import.meta.env.VITE_API_URL);
   }, []);
+
   // Prévisualisation
   useEffect(() => {
     let content = "";
@@ -382,58 +380,74 @@ export default function GenererPost() {
   };
 
   return (
-    <div className="space-y-6 p-4">
+    <div className="space-y-6 p-4 max-w-5xl mx-auto">
       <div className="fixed top-5 right-5 left-5 md:left-auto md:w-96 flex flex-col items-stretch z-50">
         {toasts.map((t) => (
           <Toast key={t.id} message={t.message} type={t.type} onClose={() => setToasts((prev) => prev.filter((x) => x.id !== t.id))} />
         ))}
       </div>
 
-      <h2 className="text-4xl font-extrabold tracking-wide text-black">Générateur de post</h2>
-      <p className="text-sm text-gray-600 mt-1">Générer vos contenus textuels et visuels à l'aide de l'IA ou sans IA.</p>
+      <div className="text-center">
+        <h2 className="text-4xl font-extrabold tracking-wide text-black">Générateur de post</h2>
+        <p className="text-sm text-gray-600 mt-2">Générer vos contenus textuels et visuels à l'aide de l'IA ou sans IA.</p>
+      </div>
 
       {/* Choix contenu */}
-      <div className="flex gap-4 mt-4 justify-center">
+      <div className="flex gap-4 justify-center">
         <button
           className={`px-6 py-3 rounded-xl font-semibold shadow-sm transition-all ${useAIContent ? "bg-blue-900 text-white" : "bg-blue-50 text-blue-900 hover:bg-blue-100"}`}
           onClick={() => setUseAIContent(true)}
         >
-          Contenu Textuel
+          📝 Contenu Textuel
         </button>
         <button
           className={`px-6 py-3 rounded-xl font-semibold shadow-sm transition-all ${!useAIContent ? "bg-blue-900 text-white" : "bg-blue-50 text-blue-900 hover:bg-blue-100"}`}
           onClick={() => setUseAIContent(false)}
         >
-          Contenu Visuel
+          🎨 Contenu Visuel
         </button>
       </div>
 
       {/* Contenu textuel */}
       {useAIContent && (
-        <div className="mt-6">
+        <div className="mt-6 bg-white p-6 rounded-2xl shadow-md border border-gray-100">
           {/* IA ou manuel */}
-          <div className="flex gap-6 mt-6">
+          <div className="flex gap-6">
             <label className="flex items-center gap-2 cursor-pointer">
-              <input type="radio" checked={useAI} onChange={() => setUseAI(true)} />
+              <input type="radio" checked={useAI} onChange={() => setUseAI(true)} className="w-4 h-4 text-blue-900" />
               <span className="font-medium">Avec IA</span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer">
-              <input type="radio" checked={!useAI} onChange={() => setUseAI(false)} />
+              <input type="radio" checked={!useAI} onChange={() => setUseAI(false)} className="w-4 h-4 text-blue-900" />
               <span className="font-medium">Texte manuel</span>
             </label>
           </div>
 
           {useAI ? (
             <div className="flex flex-col md:flex-row gap-4 mt-4">
-              <input type="text" placeholder="Thème" value={theme} onChange={(e) => setTheme(e.target.value)} className="border border-gray-300 p-3 rounded-xl flex-1 shadow-sm" />
-              <select value={tone} onChange={(e) => setTone(e.target.value)} className="border border-gray-300 p-3 rounded-xl flex-1 shadow-sm">
+              <input 
+                type="text" 
+                placeholder="Thème" 
+                value={theme} 
+                onChange={(e) => setTheme(e.target.value)} 
+                className="border border-gray-300 p-3 rounded-xl flex-1 shadow-sm focus:ring-2 focus:ring-blue-900 focus:border-transparent" 
+              />
+              <select 
+                value={tone} 
+                onChange={(e) => setTone(e.target.value)} 
+                className="border border-gray-300 p-3 rounded-xl flex-1 shadow-sm focus:ring-2 focus:ring-blue-900 focus:border-transparent"
+              >
                 <option value="">-- Choisir le ton --</option>
                 <option value="professionnel">Professionnel</option>
                 <option value="amical">Amical</option>
                 <option value="humoristique">Humoristique</option>
                 <option value="motivant">Motivant</option>
               </select>
-              <select value={length} onChange={(e) => setLength(e.target.value)} className="border border-gray-300 p-3 rounded-xl flex-1 shadow-sm">
+              <select 
+                value={length} 
+                onChange={(e) => setLength(e.target.value)} 
+                className="border border-gray-300 p-3 rounded-xl flex-1 shadow-sm focus:ring-2 focus:ring-blue-900 focus:border-transparent"
+              >
                 <option value="court">Court</option>
                 <option value="moyen">Moyen</option>
                 <option value="long">Long</option>
@@ -442,16 +456,16 @@ export default function GenererPost() {
           ) : (
             <>
               <div className="flex gap-3 mt-4">
-                <button onClick={() => document.execCommand("bold")} className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200"><FiBold /></button>
-                <button onClick={() => document.execCommand("italic")} className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200"><FiItalic /></button>
-                <button onClick={() => document.execCommand("underline")} className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200"><FiUnderline /></button>
-                <button onClick={() => document.execCommand("insertUnorderedList")} className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200"><FiList /></button>
+                <button onClick={() => document.execCommand("bold")} className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"><FiBold /></button>
+                <button onClick={() => document.execCommand("italic")} className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"><FiItalic /></button>
+                <button onClick={() => document.execCommand("underline")} className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"><FiUnderline /></button>
+                <button onClick={() => document.execCommand("insertUnorderedList")} className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"><FiList /></button>
               </div>
               <div 
                 ref={editorRef} 
                 contentEditable 
                 suppressContentEditableWarning 
-                className="border border-gray-300 p-4 rounded-xl min-h-[150px] text-lg shadow-sm focus:ring-2 focus:ring-gray-400 mt-4"
+                className="border border-gray-300 p-4 rounded-xl min-h-[150px] text-lg shadow-sm focus:ring-2 focus:ring-blue-900 focus:border-transparent mt-4"
                 onInput={() => setPreviewContent(editorRef.current?.innerHTML)}
               />
             </>
@@ -460,47 +474,134 @@ export default function GenererPost() {
       )}
 
       {/* Contenu visuel */}
-      {!useAIContent && <ImageGenerator setImageUrl={setImageUrl} />}
+      {!useAIContent && (
+        <div className="bg-white p-6 rounded-2xl shadow-md border border-gray-100">
+          <ImageGenerator 
+            setImageUrl={setImageUrl} 
+            recaptchaToken={recaptchaToken}
+            onRecaptchaChange={onRecaptchaChange}
+          />
+        </div>
+      )}
 
-      {/* Planification */}
-      <div className="flex items-center gap-3 mt-4">
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input type="checkbox" checked={scheduled} onChange={(e) => setScheduled(e.target.checked)} />
-          Programmer le post
-        </label>
-        {scheduled && (
-          <>
-            <input type="date" value={scheduledDate} onChange={(e) => setScheduledDate(e.target.value)} className="border border-gray-300 p-2 rounded-xl" />
-            <input type="time" value={scheduledTime} onChange={(e) => setScheduledTime(e.target.value)} className="border border-gray-300 p-2 rounded-xl" />
-          </>
+      {/* reCAPTCHA - Affiché pour le contenu textuel */}
+      {useAIContent && (
+        <div className="bg-white p-6 rounded-2xl shadow-md border border-gray-100">
+          <h3 className="font-semibold text-lg mb-3">🔒 Vérification de sécurité</h3>
+          <ReCAPTCHA
+            ref={recaptchaRef}
+            sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
+            onChange={onRecaptchaChange}
+          />
+          <p className="text-xs text-gray-500 mt-2">
+            {recaptchaToken ? "✅ reCAPTCHA validé" : "⚠️ Valide le reCAPTCHA avant d'envoyer."}
+          </p>
+        </div>
+      )}
+
+      {/* Planification - Stylisée avec icônes */}
+      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-2xl shadow-md border border-blue-100">
+        <div className="flex items-center gap-3 mb-4">
+          <FiCalendar className="text-blue-900 text-2xl" />
+          <h3 className="font-semibold text-lg text-blue-900">Programmation de publication</h3>
+        </div>
+        
+        <div className="flex items-start gap-3">
+          <label className="flex items-center gap-2 cursor-pointer bg-white px-4 py-2 rounded-xl shadow-sm hover:shadow-md transition-all">
+            <input 
+              type="checkbox" 
+              checked={scheduled} 
+              onChange={(e) => setScheduled(e.target.checked)} 
+              className="w-4 h-4 text-blue-900"
+            />
+            <span className="font-medium text-gray-700">Programmer ce post</span>
+          </label>
+          
+          {scheduled && (
+            <div className="flex flex-col sm:flex-row gap-3 flex-1">
+              <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl shadow-sm flex-1">
+                <FiCalendar className="text-blue-900" />
+                <input 
+                  type="date" 
+                  value={scheduledDate} 
+                  onChange={(e) => setScheduledDate(e.target.value)} 
+                  className="border-0 focus:ring-0 w-full text-gray-700 font-medium"
+                />
+              </div>
+              
+              <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl shadow-sm flex-1">
+                <FiClock className="text-blue-900" />
+                <input 
+                  type="time" 
+                  value={scheduledTime} 
+                  onChange={(e) => setScheduledTime(e.target.value)} 
+                  className="border-0 focus:ring-0 w-full text-gray-700 font-medium"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+        
+        {scheduled && scheduledDate && scheduledTime && (
+          <div className="mt-3 p-3 bg-white rounded-xl text-sm text-gray-600">
+            📅 Publication prévue le <strong>{new Date(`${scheduledDate}T${scheduledTime}`).toLocaleDateString('fr-FR', { 
+              weekday: 'long', 
+              year: 'numeric', 
+              month: 'long', 
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit'
+            })}</strong>
+          </div>
         )}
       </div>
 
-      <button onClick={handleGenerate} disabled={loading} className="bg-blue-900 text-white px-6 py-3 rounded-xl mt-4 font-bold shadow-md hover:bg-blue-950 transition-all duration-200">
-        {loading ? "⏳ Génération..." : "Générer / Enregistrer le post"}
+      <button 
+        onClick={handleGenerate} 
+        disabled={loading} 
+        className="w-full bg-blue-900 text-white px-6 py-4 rounded-xl font-bold shadow-lg hover:bg-blue-950 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-lg"
+      >
+        {loading ? "⏳ Génération en cours..." : "✨ Générer / Enregistrer le post"}
       </button>
 
       {/* Prévisualisation */}
       {previewContent && (
-        <div className="mt-6 p-4 border border-gray-300 rounded-xl shadow-sm">
-          <h3 className="font-bold mb-2">Prévisualisation</h3>
-          <div dangerouslySetInnerHTML={{ __html: previewContent }} />
-          <button onClick={() => copyContent(previewContent)} className="mt-2 text-sm text-blue-900 font-semibold">📋 Copier</button>
+        <div className="mt-6 p-6 bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200 rounded-2xl shadow-md">
+          <h3 className="font-bold text-xl mb-3 text-gray-800">👁️ Prévisualisation</h3>
+          <div dangerouslySetInnerHTML={{ __html: previewContent }} className="prose max-w-none" />
+          <button 
+            onClick={() => copyContent(previewContent)} 
+            className="mt-4 text-sm text-blue-900 font-semibold bg-white px-4 py-2 rounded-lg hover:bg-blue-50 transition-colors shadow-sm"
+          >
+            📋 Copier le contenu
+          </button>
         </div>
       )}
 
       {/* Historique */}
       {postsHistory.length > 0 && (
-        <div className="mt-6">
-          <h3 className="font-bold mb-2">Historique des posts</h3>
-          <div className="space-y-3">
+        <div className="mt-8">
+          <h3 className="font-bold text-2xl mb-4 text-gray-800">📚 Historique des posts</h3>
+          <div className="space-y-4">
             {postsHistory.map((p) => (
-              <div key={p.id} className="border p-3 rounded-xl shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
-                <div dangerouslySetInnerHTML={{ __html: p.content }} className="flex-1" />
-                {p.imageUrl && <img src={p.imageUrl} alt="" className="max-w-[150px] rounded-xl" />}
+              <div key={p.id} className="bg-white border border-gray-200 p-5 rounded-2xl shadow-md hover:shadow-lg transition-shadow flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div dangerouslySetInnerHTML={{ __html: p.content }} className="flex-1 prose max-w-none" />
+                {p.imageUrl && <img src={p.imageUrl} alt="" className="max-w-[150px] rounded-xl shadow-sm" />}
                 <div className="flex gap-2 mt-2 md:mt-0">
-                  {p.status !== "published" && <button onClick={() => handlePublish(p.id, p.content, p.imageUrl)} className="bg-emerald-500 text-white px-3 py-1 rounded-xl text-sm font-semibold hover:bg-emerald-600">Publier</button>}
-                  <button onClick={() => copyContent(p.content)} className="bg-blue-50 text-blue-900 px-3 py-1 rounded-xl text-sm font-semibold hover:bg-blue-100">Copier</button>
+                  {p.status !== "published" && (
+                    <button 
+                      onClick={() => handlePublish(p.id, p.content, p.imageUrl)} 
+                      className="bg-emerald-500 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-emerald-600 transition-colors shadow-sm"
+                    >
+                      ✓ Publier
+                    </button>
+                  )}
+                  <button 
+                    onClick={() => copyContent(p.content)} 
+                    className="bg-blue-50 text-blue-900 px-4 py-2 rounded-xl text-sm font-semibold hover:bg-blue-100 transition-colors shadow-sm"
+                  >
+                    📋 Copier
+                  </button>
                 </div>
               </div>
             ))}
