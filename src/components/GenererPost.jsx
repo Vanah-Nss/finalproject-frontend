@@ -238,8 +238,12 @@ export default function GenererPost() {
       setLoading(false);
     },
     onError: (error) => {
-      console.error("Erreur generatePost:", error);
-      addToast(`❌ Impossible de générer le post: ${error.message}`, "error");
+      console.error("Erreur generatePost complète:", error);
+      console.error("Détails GraphQL:", error.graphQLErrors);
+      console.error("Network error:", error.networkError);
+      
+      const errorMessage = error.graphQLErrors?.[0]?.message || error.message;
+      addToast(`❌ Impossible de générer le post: ${errorMessage}`, "error");
       setLoading(false);
     },
   });
@@ -271,8 +275,13 @@ export default function GenererPost() {
       setLoading(false);
     },
     onError: (error) => {
-      console.error("Erreur createPost:", error);
-      addToast(`❌ Impossible d'enregistrer le post: ${error.message}`, "error");
+      console.error("Erreur createPost complète:", error);
+      console.error("Détails de l'erreur:", error.graphQLErrors);
+      console.error("Network error:", error.networkError);
+      
+      // Afficher le message d'erreur détaillé
+      const errorMessage = error.graphQLErrors?.[0]?.message || error.message;
+      addToast(`❌ Impossible d'enregistrer le post: ${errorMessage}`, "error");
       setLoading(false);
     },
   });
@@ -311,6 +320,17 @@ export default function GenererPost() {
         finalImageUrl = data.url;
       }
 
+      console.log("📤 Envoi des données:", {
+        useAIContent,
+        useAI,
+        theme,
+        tone,
+        length,
+        finalImageUrl,
+        scheduledAt,
+        recaptchaToken: recaptchaToken ? "✅ Present" : "❌ Missing"
+      });
+
       if (useAIContent) {
         if (useAI) {
           if (!theme?.trim()) {
@@ -318,7 +338,17 @@ export default function GenererPost() {
             setLoading(false);
             return;
           }
-          await generatePostMutation({ variables: { theme, tone, length, imageUrl: finalImageUrl, scheduledAt, recaptchaToken } });
+          console.log("🤖 Génération IA avec:", { theme, tone, length, imageUrl: finalImageUrl, scheduledAt });
+          await generatePostMutation({ 
+            variables: { 
+              theme, 
+              tone: tone || null, 
+              length, 
+              imageUrl: finalImageUrl, 
+              scheduledAt, 
+              recaptchaToken 
+            } 
+          });
         } else {
           const rawContent = editorRef.current?.innerHTML;
           if (!rawContent?.trim()) {
@@ -326,7 +356,15 @@ export default function GenererPost() {
             setLoading(false);
             return;
           }
-          await createPostMutation({ variables: { content: rawContent, imageUrl: finalImageUrl, scheduledAt, recaptchaToken } });
+          console.log("✍️ Création post manuel avec:", { content: rawContent, imageUrl: finalImageUrl, scheduledAt });
+          await createPostMutation({ 
+            variables: { 
+              content: rawContent, 
+              imageUrl: finalImageUrl, 
+              scheduledAt, 
+              recaptchaToken 
+            } 
+          });
         }
       } else {
         if (!finalImageUrl) {
@@ -334,11 +372,20 @@ export default function GenererPost() {
           setLoading(false);
           return;
         }
-        await createPostMutation({ variables: { content: "", imageUrl: finalImageUrl, scheduledAt, recaptchaToken } });
+        console.log("🖼️ Création post image seule avec:", { imageUrl: finalImageUrl, scheduledAt });
+        await createPostMutation({ 
+          variables: { 
+            content: " ", // Espace au lieu de chaîne vide
+            imageUrl: finalImageUrl, 
+            scheduledAt, 
+            recaptchaToken 
+          } 
+        });
       }
 
     } catch (err) {
-      console.error("Erreur handleGenerate:", err);
+      console.error("❌ Erreur handleGenerate:", err);
+      console.error("Détails:", err.graphQLErrors || err.networkError);
       addToast(`❌ ${err.message || "Impossible de générer le post."}`, "error");
     } finally {
       setLoading(false);
