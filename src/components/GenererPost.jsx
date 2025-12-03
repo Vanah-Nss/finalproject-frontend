@@ -134,7 +134,7 @@ function ImageGenerator({ setImageUrl, recaptchaToken, onRecaptchaChange }) {
     onCompleted: (data) => {
       if (data.generateImage.success) {
         setImageUrl(data.generateImage.imageUrl);
-        addToast("🖼️ Image générée avec succès !", "success");
+        addToast(" Image générée avec succès !", "success");
       } else {
         addToast(`❌ ${data.generateImage.message}`, "error");
       }
@@ -265,7 +265,7 @@ export default function GenererPost() {
     onCompleted: (data) => {
       const post = data.createPost.post;
       setPostsHistory((prev) => [post, ...prev]);
-      addToast(post.scheduledAt ? "📅 Post programmé !" : "📝 Post enregistré !", "success");
+      addToast(post.scheduledAt ? "📅 Post programmé !" : " Post enregistré !", "success");
       if (editorRef.current) editorRef.current.innerHTML = "";
       setImageFile(null);
       setImageUrl("");
@@ -320,7 +320,7 @@ export default function GenererPost() {
         finalImageUrl = data.url;
       }
 
-      console.log("📤 Envoi des données:", {
+      console.log(" Envoi des données:", {
         useAIContent,
         useAI,
         theme,
@@ -356,7 +356,7 @@ export default function GenererPost() {
             setLoading(false);
             return;
           }
-          console.log("✍️ Création post manuel avec:", { content: rawContent, imageUrl: finalImageUrl, scheduledAt });
+          console.log("Création post manuel avec:", { content: rawContent, imageUrl: finalImageUrl, scheduledAt });
           await createPostMutation({ 
             variables: { 
               content: rawContent, 
@@ -372,7 +372,7 @@ export default function GenererPost() {
           setLoading(false);
           return;
         }
-        console.log("🖼️ Création post image seule avec:", { imageUrl: finalImageUrl, scheduledAt });
+        console.log(" Création post image seule avec:", { imageUrl: finalImageUrl, scheduledAt });
         await createPostMutation({ 
           variables: { 
             content: " ", // Espace au lieu de chaîne vide
@@ -411,7 +411,7 @@ export default function GenererPost() {
         content = editorRef.current.innerHTML || "";
       }
     } else {
-      content = finalImageUrl ? `<p>🖼️ Image :</p><img src="${finalImageUrl}" style="max-width:100%; border-radius:8px;" />` : "";
+      content = finalImageUrl ? `<p>Image :</p><img src="${finalImageUrl}" style="max-width:100%; border-radius:8px;" />` : "";
     }
 
     setPreviewContent(content);
@@ -423,7 +423,7 @@ export default function GenererPost() {
 
   const copyContent = (content) => {
     navigator.clipboard.writeText(content);
-    addToast("📋 Contenu copié !", "success");
+    addToast(" Contenu copié !", "success");
   };
 
   const handlePublish = async (id, content, imageUrl) => {
@@ -459,13 +459,13 @@ export default function GenererPost() {
           className={`px-6 py-3 rounded-xl font-semibold shadow-sm transition-all ${useAIContent ? "bg-blue-900 text-white" : "bg-blue-50 text-blue-900 hover:bg-blue-100"}`}
           onClick={() => setUseAIContent(true)}
         >
-          📝 Contenu Textuel
+          Contenu Textuel
         </button>
         <button
           className={`px-6 py-3 rounded-xl font-semibold shadow-sm transition-all ${!useAIContent ? "bg-blue-900 text-white" : "bg-blue-50 text-blue-900 hover:bg-blue-100"}`}
           onClick={() => setUseAIContent(false)}
         >
-          🎨 Contenu Visuel
+           Contenu Visuel
         </button>
       </div>
 
@@ -537,7 +537,7 @@ export default function GenererPost() {
       {/* Contenu visuel */}
       {!useAIContent && (
         <div className="bg-white p-6 rounded-2xl shadow-md border border-gray-100">
-          <h3 className="font-semibold text-lg mb-4 text-gray-800">🎨 Générateur d'image IA</h3>
+          <h3 className="font-semibold text-lg mb-4 text-gray-800">Générateur d'image IA</h3>
           <ImageGenerator 
             setImageUrl={setImageUrl} 
             recaptchaToken={recaptchaToken}
@@ -550,7 +550,7 @@ export default function GenererPost() {
       {useAIContent && (
         <div className="bg-white p-6 rounded-2xl shadow-md border border-gray-100">
           <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
-            🔒 Vérification de sécurité
+            🔒 Vérification
           </h3>
           <ReCAPTCHA
             ref={recaptchaRef}
@@ -578,7 +578,7 @@ export default function GenererPost() {
               onChange={(e) => setScheduled(e.target.checked)} 
               className="w-4 h-4 text-blue-900"
             />
-            <span className="font-medium text-gray-700">Programmer ce post</span>
+            <span className="font-medium text-gray-700"> 📅 Programmer ce post</span>
           </label>
           
           {scheduled && (
@@ -637,7 +637,7 @@ export default function GenererPost() {
             onClick={() => copyContent(previewContent)} 
             className="mt-4 text-sm text-blue-900 font-semibold bg-white px-4 py-2 rounded-lg hover:bg-blue-50 transition-colors shadow-sm"
           >
-            📋 Copier le contenu
+             Copier le contenu
           </button>
         </div>
       )}
@@ -645,7 +645,7 @@ export default function GenererPost() {
       {/* Historique */}
       {postsHistory.length > 0 && (
         <div className="mt-8">
-          <h3 className="font-bold text-2xl mb-4 text-gray-800">📚 Historique des posts</h3>
+          <h3 className="font-bold text-2xl mb-4 text-gray-800">Historique des posts</h3>
           <div className="space-y-4">
             {postsHistory.map((p) => (
               <div key={p.id} className="bg-white border border-gray-200 p-5 rounded-2xl shadow-md hover:shadow-lg transition-shadow flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -664,7 +664,7 @@ export default function GenererPost() {
                     onClick={() => copyContent(p.content)} 
                     className="bg-blue-50 text-blue-900 px-4 py-2 rounded-xl text-sm font-semibold hover:bg-blue-100 transition-colors shadow-sm"
                   >
-                    📋 Copier
+                     Copier
                   </button>
                 </div>
               </div>
