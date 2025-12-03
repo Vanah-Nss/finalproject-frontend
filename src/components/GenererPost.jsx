@@ -223,20 +223,22 @@ export default function GenererPost() {
   // ✅ CORRECTION : Vérifier success avant d'accéder à post
   const [generatePostMutation] = useMutation(GENERATE_POST, {
     onCompleted: (data) => {
+      setLoading(false);
       if (data.generatePost.success && data.generatePost.post) {
         const post = data.generatePost.post;
         setPostsHistory((prev) => [post, ...prev]);
         addToast("✨ Post IA généré avec succès !", "success");
         
-        // Réinitialiser le reCAPTCHA
-        setRecaptchaToken("");
-        if (recaptchaRef.current) {
-          recaptchaRef.current.reset();
-        }
+        // Réinitialiser le reCAPTCHA APRÈS succès
+        setTimeout(() => {
+          setRecaptchaToken("");
+          if (recaptchaRef.current) {
+            recaptchaRef.current.reset();
+          }
+        }, 500);
       } else {
         addToast(data.generatePost.message || "❌ Erreur de génération", "error");
       }
-      setLoading(false);
     },
     onError: (error) => {
       console.error("❌ Erreur generatePost:", error);
@@ -264,6 +266,7 @@ export default function GenererPost() {
   // ✅ CORRECTION : Vérifier success avant d'accéder à post
   const [createPostMutation] = useMutation(CREATE_POST, {
     onCompleted: (data) => {
+      setLoading(false);
       if (data.createPost.success && data.createPost.post) {
         const post = data.createPost.post;
         setPostsHistory((prev) => [post, ...prev]);
@@ -279,15 +282,16 @@ export default function GenererPost() {
         setTheme("");
         setTone("");
         
-        // Réinitialiser le reCAPTCHA
-        setRecaptchaToken("");
-        if (recaptchaRef.current) {
-          recaptchaRef.current.reset();
-        }
+        // Réinitialiser le reCAPTCHA APRÈS succès
+        setTimeout(() => {
+          setRecaptchaToken("");
+          if (recaptchaRef.current) {
+            recaptchaRef.current.reset();
+          }
+        }, 500);
       } else {
         addToast(data.createPost.message || "❌ Erreur lors de la création", "error");
       }
-      setLoading(false);
     },
     onError: (error) => {
       console.error("❌ Erreur createPost:", error);
