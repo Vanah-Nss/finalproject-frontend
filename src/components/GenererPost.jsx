@@ -184,6 +184,7 @@ function ImageGenerator({ setImageUrl, getValidToken, addToast }) {
 // Main Component
 export default function GenererPost() {
   const recaptchaRef = useRef(null);
+  const [recaptchaToken, setRecaptchaToken] = useState("");
   const [useAIContent, setUseAIContent] = useState(true);
   const [useAI, setUseAI] = useState(true);
   const [theme, setTheme] = useState("");
@@ -206,19 +207,20 @@ export default function GenererPost() {
     setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 4000);
   };
 
+  const onRecaptchaChange = (token) => {
+    console.log("✅ reCAPTCHA validé, token reçu:", token ? token.substring(0, 20) + "..." : "null");
+    setRecaptchaToken(token || "");
+  };
+
 
   // ✅ FONCTION CRITIQUE : Obtenir un token VALIDE avant chaque requête
 const getValidToken = async () => {
-  if (!recaptchaRef.current) return null;
-
-  try {
-    const token = await recaptchaRef.current.executeAsync(); // génère un token frais
-    recaptchaRef.current.reset(); // reset pour la prochaine utilisation
-    return token;
-  } catch (err) {
-    console.error("Erreur reCAPTCHA :", err);
+  if (!recaptchaToken || recaptchaToken.trim() === "") {
+    console.log("⚠️ Aucun token reCAPTCHA disponible");
     return null;
   }
+  console.log("✅ Token reCAPTCHA disponible:", recaptchaToken.substring(0, 20) + "...");
+  return recaptchaToken;
 };
 
   const resetForm = () => {
@@ -233,6 +235,7 @@ const getValidToken = async () => {
     
     // Reset reCAPTCHA après succès
     setTimeout(() => {
+      setRecaptchaToken("");
       if (recaptchaRef.current) {
         recaptchaRef.current.reset();
       }
@@ -579,7 +582,7 @@ const getValidToken = async () => {
         </div>
       )}
 
-      {/* reCAPTCHA caché - se régénère automatiquement */}
+      {/* reCAPTCHA visible */}
       <div className="bg-white p-6 rounded-2xl shadow-md border border-gray-100">
         <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
           🔒 Vérification de sécurité
@@ -587,10 +590,11 @@ const getValidToken = async () => {
         <ReCAPTCHA
           ref={recaptchaRef}
           sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
-          size="invisible"
+          onChange={onRecaptchaChange}
+          size="normal"
         />
         <p className="text-xs text-gray-500 mt-2">
-          ℹ️ Le reCAPTCHA se régénère automatiquement avant chaque envoi
+          ℹ️ Cochez la case reCAPTCHA avant d'envoyer
         </p>
       </div>
 
