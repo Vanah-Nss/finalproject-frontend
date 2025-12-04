@@ -13,7 +13,7 @@ import {
 } from "react-icons/fi";
 import ReCAPTCHA from "react-google-recaptcha";
 
-// GraphQL
+// GraphQL Mutations (inchangé)
 const CREATE_POST = gql`
   mutation CreatePost($content: String!, $imageUrl: String, $scheduledAt: String, $recaptchaToken: String!) {
     createPost(content: $content, imageUrl: $imageUrl, scheduledAt: $scheduledAt, recaptchaToken: $recaptchaToken) {
@@ -86,7 +86,7 @@ const GENERATE_IMAGE = gql`
   }
 `;
 
-// Toast
+// Toast Component
 function Toast({ message, type, onClose }) {
   const styles =
     type === "success"
@@ -105,18 +105,10 @@ function Toast({ message, type, onClose }) {
   );
 }
 
-// Image Generator
-function ImageGenerator({ setImageUrl, recaptchaToken, onRecaptchaChange }) {
+// Image Generator Component
+function ImageGenerator({ setImageUrl, recaptchaRef, getValidToken, addToast }) {
   const [prompt, setPrompt] = useState("");
   const [loading, setLoading] = useState(false);
-  const [toasts, setToasts] = useState([]);
-  const recaptchaRef = useRef(null);
-
-  const addToast = (message, type) => {
-    const id = Date.now();
-    setToasts((prev) => [...prev, { id, message, type }]);
-    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 4000);
-  };
 
   const [generateImageMutation] = useMutation(GENERATE_IMAGE, {
     onCompleted: (data) => {
@@ -135,27 +127,41 @@ function ImageGenerator({ setImageUrl, recaptchaToken, onRecaptchaChange }) {
     },
   });
 
-  const handleGenerate = () => {
-    if (!recaptchaToken) {
-      addToast("⚠️ Valide le reCAPTCHA avant de générer !", "error");
-      return;
-    }
+  const handleGenerate = async () => {
     if (!prompt.trim()) {
-      addToast("Le prompt ne peut pas être vide !", "error");
+      addToast("⚠️ Entre un prompt pour générer l'image !", "error");
       return;
     }
+    if (loading) return;
+    
     setLoading(true);
-    generateImageMutation({ variables: { prompt, recaptchaToken } });
+    
+    try {
+      // ✅ Obtenir un token FRAIS
+      const freshToken = await getValidToken();
+      
+      if (!freshToken) {
+        addToast("❌ Impossible d'obtenir le token reCAPTCHA", "error");
+        setLoading(false);
+        return;
+      }
+
+      await generateImageMutation({
+        variables: {
+          prompt,
+          recaptchaToken: freshToken
+        }
+      });
+    } catch (err) {
+      console.error("❌ Erreur generateImage:", err);
+      const errorMsg = err.graphQLErrors?.[0]?.message || err.message || "Erreur inconnue";
+      addToast(`❌ ${errorMsg}`, "error");
+      setLoading(false);
+    }
   };
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="fixed top-5 right-5 left-5 md:left-auto md:w-96 flex flex-col items-stretch z-50">
-        {toasts.map((t) => (
-          <Toast key={t.id} message={t.message} type={t.type} onClose={() => setToasts((prev) => prev.filter((x) => x.id !== t.id))} />
-        ))}
-      </div>
-
       <input
         type="text"
         value={prompt}
@@ -164,23 +170,9 @@ function ImageGenerator({ setImageUrl, recaptchaToken, onRecaptchaChange }) {
         className="border border-gray-300 p-3 rounded-2xl shadow-sm w-full focus:ring-2 focus:ring-blue-900 focus:border-transparent"
       />
 
-      <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
-        <h4 className="font-semibold text-sm text-blue-900 mb-3 flex items-center gap-2">
-          🔒 Vérification de sécurité
-        </h4>
-        <ReCAPTCHA
-          ref={recaptchaRef}
-          sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
-          onChange={onRecaptchaChange}
-        />
-        <p className="text-xs text-gray-600 mt-2">
-          {recaptchaToken ? "✅ reCAPTCHA validé" : "⚠️ Valide le reCAPTCHA avant de générer l'image."}
-        </p>
-      </div>
-
       <button
         onClick={handleGenerate}
-        disabled={loading || !recaptchaToken}
+        disabled={loading}
         className="bg-blue-900 text-white px-5 py-3 rounded-xl hover:bg-blue-950 shadow-md font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {loading ? "⏳ Génération en cours..." : "✨ Générer l'image"}
@@ -220,7 +212,58 @@ export default function GenererPost() {
     setRecaptchaToken(token || "");
   };
 
-  // ✅ CORRECTION : Vérifier success avant d'accéder à post
+  // ✅ FONCTION CRITIQUE : Obtenir un token FRAIS avant chaque requête
+  const getValidToken = async () => {
+    if (!recaptchaRef.current) {
+      console.error("❌ recaptchaRef non disponible");
+      return null;
+    }
+
+    try {
+      console.log("🔄 Régénération du token reCAPTCHA...");
+      
+      // Reset le reCAPTCHA pour forcer une nouvelle validation
+      recaptchaRef.current.reset();
+      
+      // Attendre que le reset soit effectif
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      // Exécuter le reCAPTCHA
+      const token = await recaptchaRef.current.executeAsync();
+      
+      if (token) {
+        console.log("✅ Nouveau token obtenu:", token.substring(0, 20) + "...");
+        setRecaptchaToken(token);
+        return token;
+      } else {
+        console.error("❌ Token vide retourné");
+        return null;
+      }
+    } catch (error) {
+      console.error("❌ Erreur lors de l'obtention du token:", error);
+      return null;
+    }
+  };
+
+  const resetForm = () => {
+    if (editorRef.current) editorRef.current.innerHTML = "";
+    setImageFile(null);
+    setImageUrl("");
+    setScheduled(false);
+    setScheduledDate("");
+    setScheduledTime("");
+    setTheme("");
+    setTone("");
+    
+    // Reset reCAPTCHA après succès
+    setTimeout(() => {
+      setRecaptchaToken("");
+      if (recaptchaRef.current) {
+        recaptchaRef.current.reset();
+      }
+    }, 500);
+  };
+
   const [generatePostMutation] = useMutation(GENERATE_POST, {
     onCompleted: (data) => {
       setLoading(false);
@@ -228,22 +271,33 @@ export default function GenererPost() {
         const post = data.generatePost.post;
         setPostsHistory((prev) => [post, ...prev]);
         addToast("✨ Post IA généré avec succès !", "success");
-        
-        // Réinitialiser le reCAPTCHA
-        setTimeout(() => {
-          setRecaptchaToken("");
-          if (recaptchaRef.current) {
-            recaptchaRef.current.reset();
-          }
-        }, 500);
+        resetForm();
       } else {
         addToast(data.generatePost.message || "❌ Erreur de génération", "error");
       }
     },
     onError: (error) => {
       console.error("❌ Erreur generatePost:", error);
-      console.error("GraphQL Errors:", error.graphQLErrors);
-      console.error("Network Error:", error.networkError);
+      const errorMessage = error.graphQLErrors?.[0]?.message || error.message;
+      addToast(`❌ ${errorMessage}`, "error");
+      setLoading(false);
+    },
+  });
+
+  const [createPostMutation] = useMutation(CREATE_POST, {
+    onCompleted: (data) => {
+      setLoading(false);
+      if (data.createPost.success && data.createPost.post) {
+        const post = data.createPost.post;
+        setPostsHistory((prev) => [post, ...prev]);
+        addToast(post.scheduledAt ? "📅 Post programmé !" : "✅ Post enregistré !", "success");
+        resetForm();
+      } else {
+        addToast(data.createPost.message || "❌ Erreur lors de la création", "error");
+      }
+    },
+    onError: (error) => {
+      console.error("❌ Erreur createPost:", error);
       const errorMessage = error.graphQLErrors?.[0]?.message || error.message;
       addToast(`❌ ${errorMessage}`, "error");
       setLoading(false);
@@ -256,6 +310,7 @@ export default function GenererPost() {
       setPostsHistory((prev) =>
         prev.map((p) => (p.id === updatedPost.id ? updatedPost : p))
       );
+      addToast("✅ Post publié avec succès !", "success");
     },
     onError: (error) => {
       console.error("Erreur publication:", error);
@@ -263,59 +318,24 @@ export default function GenererPost() {
     },
   });
 
-  // ✅ CORRECTION : Vérifier success avant d'accéder à post
-  const [createPostMutation] = useMutation(CREATE_POST, {
-    onCompleted: (data) => {
-      setLoading(false);
-      if (data.createPost.success && data.createPost.post) {
-        const post = data.createPost.post;
-        setPostsHistory((prev) => [post, ...prev]);
-        addToast(post.scheduledAt ? "📅 Post programmé !" : "✅ Post enregistré !", "success");
-        
-        // Réinitialisation du formulaire
-        if (editorRef.current) editorRef.current.innerHTML = "";
-        setImageFile(null);
-        setImageUrl("");
-        setScheduled(false);
-        setScheduledDate("");
-        setScheduledTime("");
-        setTheme("");
-        setTone("");
-        
-        // Réinitialiser le reCAPTCHA
-        setTimeout(() => {
-          setRecaptchaToken("");
-          if (recaptchaRef.current) {
-            recaptchaRef.current.reset();
-          }
-        }, 500);
-      } else {
-        addToast(data.createPost.message || "❌ Erreur lors de la création", "error");
-      }
-    },
-    onError: (error) => {
-      console.error("❌ Erreur createPost:", error);
-      console.error("GraphQL Errors:", error.graphQLErrors);
-      console.error("Network Error:", error.networkError);
-      const errorMessage = error.graphQLErrors?.[0]?.message || error.message;
-      addToast(`❌ ${errorMessage}`, "error");
-      setLoading(false);
-    },
-  });
-
-  // Gestion de génération / sauvegarde
   const handleGenerate = async () => {
-    if (!recaptchaToken) {
-      addToast("⚠️ Valide le reCAPTCHA avant d'envoyer !", "error");
-      return;
-    }
-    
-    console.log("🔐 Token reCAPTCHA v2:", recaptchaToken.substring(0, 20) + "...");
-    
     if (loading) return;
     setLoading(true);
 
     try {
+      // ✅ ÉTAPE 1 : Obtenir un token FRAIS
+      console.log("🔐 Obtention d'un token frais...");
+      const freshToken = await getValidToken();
+      
+      if (!freshToken) {
+        addToast("❌ Impossible d'obtenir le token reCAPTCHA. Rafraîchis la page.", "error");
+        setLoading(false);
+        return;
+      }
+
+      console.log("🔐 Token frais obtenu:", freshToken.substring(0, 20) + "...");
+
+      // ✅ ÉTAPE 2 : Validation de la date programmée
       let scheduledAt = null;
       if (scheduled && scheduledDate && scheduledTime) {
         const dateTime = new Date(`${scheduledDate}T${scheduledTime}:00`);
@@ -327,6 +347,7 @@ export default function GenererPost() {
         scheduledAt = dateTime.toISOString();
       }
 
+      // ✅ ÉTAPE 3 : Upload de l'image si nécessaire
       let finalImageUrl = imageUrl || null;
       if (imageFile) {
         const formData = new FormData();
@@ -340,6 +361,7 @@ export default function GenererPost() {
         finalImageUrl = data.url;
       }
 
+      // ✅ ÉTAPE 4 : Envoi de la mutation avec le token FRAIS
       if (useAIContent) {
         if (useAI) {
           if (!theme?.trim()) {
@@ -348,7 +370,7 @@ export default function GenererPost() {
             return;
           }
           
-          console.log("📤 Envoi generatePost avec token:", recaptchaToken.substring(0, 20) + "...");
+          console.log("📤 Envoi generatePost avec token frais");
           
           await generatePostMutation({
             variables: {
@@ -357,7 +379,7 @@ export default function GenererPost() {
               length,
               imageUrl: finalImageUrl,
               scheduledAt,
-              recaptchaToken: recaptchaToken
+              recaptchaToken: freshToken // ✅ TOKEN FRAIS
             }
           });
         } else {
@@ -368,14 +390,14 @@ export default function GenererPost() {
             return;
           }
           
-          console.log("📤 Envoi createPost avec token:", recaptchaToken.substring(0, 20) + "...");
+          console.log("📤 Envoi createPost avec token frais");
           
           await createPostMutation({
             variables: {
               content: rawContent,
               imageUrl: finalImageUrl,
               scheduledAt,
-              recaptchaToken: recaptchaToken
+              recaptchaToken: freshToken // ✅ TOKEN FRAIS
             }
           });
         }
@@ -386,14 +408,14 @@ export default function GenererPost() {
           return;
         }
         
-        console.log("📤 Envoi createPost (visuel) avec token:", recaptchaToken.substring(0, 20) + "...");
+        console.log("📤 Envoi createPost (visuel) avec token frais");
         
         await createPostMutation({
           variables: {
             content: "",
             imageUrl: finalImageUrl,
             scheduledAt,
-            recaptchaToken: recaptchaToken
+            recaptchaToken: freshToken // ✅ TOKEN FRAIS
           }
         });
       }
@@ -406,7 +428,6 @@ export default function GenererPost() {
     }
   };
 
-  // Prévisualisation
   useEffect(() => {
     let content = "";
     const finalImageUrl = imageFile ? URL.createObjectURL(imageFile) : imageUrl;
@@ -431,7 +452,8 @@ export default function GenererPost() {
   }, [theme, tone, length, imageFile, imageUrl, useAIContent, useAI]);
 
   const copyContent = (content) => {
-    navigator.clipboard.writeText(content);
+    const textOnly = content.replace(/<[^>]*>?/gm, "").trim();
+    navigator.clipboard.writeText(textOnly);
     addToast("📋 Contenu copié !", "success");
   };
 
@@ -449,6 +471,18 @@ export default function GenererPost() {
     }
   };
 
+  const handleImageUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        addToast("❌ L'image ne doit pas dépasser 5 MB", "error");
+        return;
+      }
+      setImageFile(file);
+      addToast("✅ Image ajoutée !", "success");
+    }
+  };
+
   return (
     <div className="space-y-6 p-4 max-w-5xl mx-auto">
       <div className="fixed top-5 right-5 left-5 md:left-auto md:w-96 flex flex-col items-stretch z-50">
@@ -462,7 +496,6 @@ export default function GenererPost() {
         <p className="text-sm text-gray-600 mt-2">Générer vos contenus textuels et visuels à l'aide de l'IA ou sans IA.</p>
       </div>
 
-      {/* Choix contenu */}
       <div className="flex gap-4 justify-center">
         <button
           className={`px-6 py-3 rounded-xl font-semibold shadow-sm transition-all ${useAIContent ? "bg-blue-900 text-white" : "bg-blue-50 text-blue-900 hover:bg-blue-100"}`}
@@ -478,7 +511,6 @@ export default function GenererPost() {
         </button>
       </div>
 
-      {/* Contenu textuel */}
       {useAIContent && (
         <div className="mt-6 bg-white p-6 rounded-2xl shadow-md border border-gray-100">
           <div className="flex gap-6">
@@ -539,22 +571,41 @@ export default function GenererPost() {
               />
             </>
           )}
+
+          <div className="mt-4">
+            <label className="flex items-center gap-2 cursor-pointer bg-gray-50 px-4 py-3 rounded-xl hover:bg-gray-100 transition-colors border border-gray-200">
+              <FiUpload className="text-blue-900" />
+              <span className="font-medium text-gray-700">📎 Ajouter une image (optionnel)</span>
+              <input 
+                type="file" 
+                accept="image/*" 
+                onChange={handleImageUpload}
+                className="hidden"
+              />
+            </label>
+            {imageFile && (
+              <div className="mt-2 text-sm text-green-600 flex items-center gap-2">
+                <FiCheckCircle />
+                <span>{imageFile.name}</span>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
-      {/* Contenu visuel */}
       {!useAIContent && (
         <div className="bg-white p-6 rounded-2xl shadow-md border border-gray-100">
           <h3 className="font-semibold text-lg mb-4 text-gray-800">Générateur d'image IA</h3>
           <ImageGenerator
             setImageUrl={setImageUrl}
-            recaptchaToken={recaptchaToken}
-            onRecaptchaChange={onRecaptchaChange}
+            recaptchaRef={recaptchaRef}
+            getValidToken={getValidToken}
+            addToast={addToast}
           />
         </div>
       )}
 
-      {/* reCAPTCHA - Affiché pour TOUS les types de contenu */}
+      {/* reCAPTCHA caché - se régénère automatiquement */}
       <div className="bg-white p-6 rounded-2xl shadow-md border border-gray-100">
         <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
           🔒 Vérification de sécurité
@@ -563,14 +614,13 @@ export default function GenererPost() {
           ref={recaptchaRef}
           sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
           onChange={onRecaptchaChange}
+          size="normal"
         />
         <p className="text-xs text-gray-500 mt-2">
-          {recaptchaToken ? "✅ reCAPTCHA validé" : "⚠️ Valide le reCAPTCHA avant d'enregistrer."}
+          ℹ️ Le reCAPTCHA se régénère automatiquement avant chaque envoi
         </p>
       </div>
 
-
-      {/* Planification */}
       <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-2xl shadow-md border border-blue-100">
         <div className="flex items-center gap-3 mb-4">
           <FiCalendar className="text-blue-900 text-2xl" />
@@ -629,13 +679,12 @@ export default function GenererPost() {
 
       <button
         onClick={handleGenerate}
-        disabled={loading || !recaptchaToken}
+        disabled={loading}
         className="w-full bg-blue-900 text-white px-6 py-4 rounded-xl font-bold shadow-lg hover:bg-blue-950 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-lg"
       >
-        {loading ? "⏳ Génération en cours..." : !recaptchaToken ? "⚠️ Valide le reCAPTCHA d'abord" : "✨ Générer / Enregistrer le post"}
+        {loading ? "⏳ Génération en cours..." : "✨ Générer / Enregistrer le post"}
       </button>
 
-      {/* Prévisualisation */}
       {previewContent && (
         <div className="mt-6 p-6 bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200 rounded-2xl shadow-md">
           <h3 className="font-bold text-xl mb-3 text-gray-800">👁️ Prévisualisation</h3>
@@ -649,6 +698,7 @@ export default function GenererPost() {
         </div>
       )}
 
+    
       {/* Historique */}
       {postsHistory.length > 0 && (
         <div className="mt-8">
