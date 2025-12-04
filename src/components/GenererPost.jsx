@@ -212,7 +212,7 @@ export default function GenererPost() {
     setRecaptchaToken(token || "");
   };
 
-  // ✅ FONCTION CRITIQUE : Obtenir un token FRAIS avant chaque requête
+  // ✅ FONCTION CRITIQUE : Obtenir un token VALIDE avant chaque requête
   const getValidToken = async () => {
     if (!recaptchaRef.current) {
       console.error("❌ recaptchaRef non disponible");
@@ -220,25 +220,28 @@ export default function GenererPost() {
     }
 
     try {
-      console.log("🔄 Régénération du token reCAPTCHA...");
+      console.log("🔄 Vérification du token reCAPTCHA...");
       
-      // Reset le reCAPTCHA pour forcer une nouvelle validation
-      recaptchaRef.current.reset();
+      // Récupérer le token actuel (si l'utilisateur a coché la case)
+      let token = recaptchaRef.current.getValue();
       
-      // Attendre que le reset soit effectif
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      // Exécuter le reCAPTCHA
-      const token = await recaptchaRef.current.executeAsync();
-      
-      if (token) {
-        console.log("✅ Nouveau token obtenu:", token.substring(0, 20) + "...");
-        setRecaptchaToken(token);
-        return token;
-      } else {
-        console.error("❌ Token vide retourné");
+      // Si pas de token ou token vide
+      if (!token || token.trim() === "") {
+        console.log("⚠️ Aucun token disponible - l'utilisateur doit cocher la case");
+        addToast("⚠️ Coche la case reCAPTCHA avant d'envoyer !", "error");
         return null;
       }
+      
+      console.log("✅ Token valide trouvé:", token.substring(0, 20) + "...");
+      
+      // Après utilisation, on reset pour la prochaine fois
+      setTimeout(() => {
+        if (recaptchaRef.current) {
+          recaptchaRef.current.reset();
+        }
+      }, 1000);
+      
+      return token;
     } catch (error) {
       console.error("❌ Erreur lors de l'obtention du token:", error);
       return null;
