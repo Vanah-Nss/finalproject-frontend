@@ -174,7 +174,15 @@ function ImageGenerator({ setImageUrl, recaptchaRef, getValidToken, addToast }) 
         disabled={loading}
         className="bg-blue-900 text-white px-5 py-3 rounded-xl hover:bg-blue-950 shadow-md font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {loading ? "⏳ Génération en cours..." : "✨ Générer l'image"}
+        {loading ? (
+          <span className="flex items-center justify-center gap-2">
+            <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Génération en cours...
+          </span>
+        ) : "✨ Générer l'image"}
       </button>
     </div>
   );
@@ -253,7 +261,6 @@ export default function GenererPost() {
 
     console.log("✅ Token reCAPTCHA disponible:", recaptchaToken.substring(0, 20) + "...");
     
-    // Pour reCAPTCHA visible, on utilise le token stocké
     return recaptchaToken;
   };
 
@@ -283,7 +290,20 @@ export default function GenererPost() {
       if (data.generatePost.success && data.generatePost.post) {
         const post = data.generatePost.post;
         setPostsHistory((prev) => [post, ...prev]);
-        addToast("✨ Post IA généré avec succès !", "success");
+        
+        // ✅ MESSAGE DE SUCCÈS POUR POST IA
+        let successMessage = "✨ Post IA généré avec succès !";
+        if (post.scheduledAt) {
+          const date = new Date(post.scheduledAt);
+          successMessage = `📅 Post IA programmé pour le ${date.toLocaleDateString('fr-FR', {
+            day: 'numeric',
+            month: 'long',
+            hour: '2-digit',
+            minute: '2-digit'
+          })} !`;
+        }
+        
+        addToast(successMessage, "success");
         resetForm();
       } else {
         addToast(data.generatePost.message || "❌ Erreur de génération", "error");
@@ -303,7 +323,20 @@ export default function GenererPost() {
       if (data.createPost.success && data.createPost.post) {
         const post = data.createPost.post;
         setPostsHistory((prev) => [post, ...prev]);
-        addToast(post.scheduledAt ? "📅 Post programmé !" : "✅ Post enregistré !", "success");
+        
+        // ✅ MESSAGE DE SUCCÈS AMÉLIORÉ
+        let successMessage = "✅ Post créé avec succès !";
+        if (post.scheduledAt) {
+          const date = new Date(post.scheduledAt);
+          successMessage = `📅 Post programmé pour le ${date.toLocaleDateString('fr-FR', {
+            day: 'numeric',
+            month: 'long',
+            hour: '2-digit',
+            minute: '2-digit'
+          })} !`;
+        }
+        
+        addToast(successMessage, "success");
         resetForm();
       } else {
         addToast(data.createPost.message || "❌ Erreur lors de la création", "error");
@@ -663,7 +696,7 @@ export default function GenererPost() {
         </div>
       )}
 
-      {/* ✅ reCAPTCHA VISIBLE - IMPORTANT: size="normal" */}
+      {/* ✅ reCAPTCHA VISIBLE */}
       <div className="bg-white p-6 rounded-2xl shadow-md border border-gray-100">
         <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
           🔒 Vérification de sécurité {isRecaptchaValidated && <span className="text-emerald-500 text-sm">✓ Validé</span>}
@@ -674,7 +707,7 @@ export default function GenererPost() {
           onChange={onRecaptchaChange}
           onExpired={onRecaptchaExpired}
           onErrored={onRecaptchaError}
-          size="normal"  // ⬅️ CRITIQUE: "normal" pour reCAPTCHA visible
+          size="normal"
           theme="light"
         />
         <div className="flex items-center justify-between mt-2">
@@ -757,18 +790,29 @@ export default function GenererPost() {
         )}
       </div>
 
-      {/* ✅ BOUTON DÉSACTIVÉ SI reCAPTCHA NON VALIDÉ */}
+      {/* ✅ BOUTON AMÉLIORÉ AVEC ANIMATION */}
       <button
         onClick={handleGenerate}
         disabled={loading || !isRecaptchaValidated}
-        className={`w-full px-6 py-4 rounded-xl font-bold shadow-lg transition-all duration-200 text-lg ${
+        className={`w-full px-6 py-4 rounded-xl font-bold shadow-lg transition-all duration-200 text-lg flex items-center justify-center gap-3 ${
           !isRecaptchaValidated 
             ? "bg-gray-300 text-gray-500 cursor-not-allowed" 
-            : "bg-blue-900 text-white hover:bg-blue-950 disabled:opacity-50 disabled:cursor-not-allowed"
+            : loading
+              ? "bg-blue-700 text-white"
+              : "bg-blue-900 text-white hover:bg-blue-950"
         }`}
       >
-        {loading ? "⏳ Génération en cours..." : 
-         !isRecaptchaValidated ? "⏳ Valider le reCAPTCHA d'abord" : "✨ Générer / Enregistrer le post"}
+        {loading ? (
+          <>
+            <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            ⏳ Génération en cours...
+          </>
+        ) : (
+          !isRecaptchaValidated ? "⏳ Valider le reCAPTCHA d'abord" : "✨ Générer / Enregistrer le post"
+        )}
       </button>
 
       {previewContent && (
