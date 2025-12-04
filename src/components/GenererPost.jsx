@@ -13,7 +13,7 @@ import {
 } from "react-icons/fi";
 import ReCAPTCHA from "react-google-recaptcha";
 
-// GraphQL Mutations (inchangé)
+// GraphQL Mutations
 const CREATE_POST = gql`
   mutation CreatePost($content: String!, $imageUrl: String, $scheduledAt: String, $recaptchaToken: String!) {
     createPost(content: $content, imageUrl: $imageUrl, scheduledAt: $scheduledAt, recaptchaToken: $recaptchaToken) {
@@ -106,7 +106,7 @@ function Toast({ message, type, onClose }) {
 }
 
 // Image Generator Component
-function ImageGenerator({ setImageUrl, getValidToken, addToast }) {
+function ImageGenerator({ setImageUrl, recaptchaRef, getValidToken, addToast }) {
   const [prompt, setPrompt] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -137,11 +137,11 @@ function ImageGenerator({ setImageUrl, getValidToken, addToast }) {
     setLoading(true);
     
     try {
-      // ✅ Obtenir un token FRAIS
-      const freshToken = await getValidToken();
+      // ✅ Obtenir un token VALIDE
+      const token = await getValidToken();
       
-      if (!freshToken) {
-        addToast("❌ Impossible d'obtenir le token reCAPTCHA", "error");
+      if (!token) {
+        addToast("❌ Veuillez valider le reCAPTCHA avant de générer l'image", "error");
         setLoading(false);
         return;
       }
@@ -149,7 +149,7 @@ function ImageGenerator({ setImageUrl, getValidToken, addToast }) {
       await generateImageMutation({
         variables: {
           prompt,
-          recaptchaToken: freshToken
+          recaptchaToken: token
         }
       });
     } catch (err) {
@@ -185,6 +185,7 @@ function ImageGenerator({ setImageUrl, getValidToken, addToast }) {
 export default function GenererPost() {
   const recaptchaRef = useRef(null);
   const [recaptchaToken, setRecaptchaToken] = useState("");
+  const [isRecaptchaValidated, setIsRecaptchaValidated] = useState(false);
   const [useAIContent, setUseAIContent] = useState(true);
   const [useAI, setUseAI] = useState(true);
   const [theme, setTheme] = useState("");
@@ -210,18 +211,41 @@ export default function GenererPost() {
   const onRecaptchaChange = (token) => {
     console.log("✅ reCAPTCHA validé, token reçu:", token ? token.substring(0, 20) + "..." : "null");
     setRecaptchaToken(token || "");
+    setIsRecaptchaValidated(!!token);
   };
 
+  const onRecaptchaExpired = () => {
+    console.log("⚠️ reCAPTCHA expiré");
+    setRecaptchaToken("");
+    setIsRecaptchaValidated(false);
+    addToast("⚠️ Le reCAPTCHA a expiré, veuillez le valider à nouveau", "error");
+  };
 
-  // ✅ FONCTION CRITIQUE : Obtenir un token VALIDE avant chaque requête
-const getValidToken = async () => {
-  if (!recaptchaToken || recaptchaToken.trim() === "") {
-    console.log("⚠️ Aucun token reCAPTCHA disponible");
-    return null;
-  }
-  console.log("✅ Token reCAPTCHA disponible:", recaptchaToken.substring(0, 20) + "...");
-  return recaptchaToken;
-};
+  const onRecaptchaError = (error) => {
+    console.error("❌ Erreur reCAPTCHA:", error);
+    setRecaptchaToken("");
+    setIsRecaptchaValidated(false);
+    addToast("❌ Erreur reCAPTCHA, veuillez réessayer", "error");
+  };
+
+  // ✅ FONCTION POUR OBTENIR UN TOKEN VALIDE (reCAPTCHA visible)
+  const getValidToken = async () => {
+    // Pour reCAPTCHA visible, on vérifie simplement si le token est valide
+    if (!isRecaptchaValidated) {
+      console.log("❌ reCAPTCHA non validé par l'utilisateur");
+      addToast("❌ Veuillez valider le reCAPTCHA avant d'envoyer", "error");
+      return null;
+    }
+
+    if (!recaptchaToken || recaptchaToken.trim() === "") {
+      console.log("❌ Aucun token reCAPTCHA disponible");
+      addToast("❌ Token reCAPTCHA manquant, veuillez revalider", "error");
+      return null;
+    }
+
+    console.log("✅ Token reCAPTCHA valide:", recaptchaToken.substring(0, 20) + "...");
+    return recaptchaToken;
+  };
 
   const resetForm = () => {
     if (editorRef.current) editorRef.current.innerHTML = "";
@@ -233,9 +257,10 @@ const getValidToken = async () => {
     setTheme("");
     setTone("");
     
-    // Reset reCAPTCHA après succès
+    // Reset reCAPTCHA après succès (optionnel)
     setTimeout(() => {
       setRecaptchaToken("");
+      setIsRecaptchaValidated(false);
       if (recaptchaRef.current) {
         recaptchaRef.current.reset();
       }
@@ -298,20 +323,47 @@ const getValidToken = async () => {
 
   const handleGenerate = async () => {
     if (loading) return;
+    
+    // Vérifications de base avant d'appeler reCAPTCHA
+    if (useAIContent) {
+      if (useAI) {
+        if (!theme?.trim()) {
+          addToast("Le thème est obligatoire pour l'IA !", "error");
+          return;
+        }
+      } else {
+        const rawContent = editorRef.current?.innerHTML || "";
+        if (!rawContent.trim() && !imageUrl && !imageFile) {
+          addToast("Le texte ou une image est obligatoire !", "error");
+          return;
+        }
+      }
+    } else {
+      if (!imageUrl && !imageFile) {
+        addToast("⚠️ Vous devez générer ou uploader une image !", "error");
+        return;
+      }
+    }
+    
+    // Vérification reCAPTCHA
+    if (!isRecaptchaValidated) {
+      addToast("❌ Veuillez valider le reCAPTCHA avant d'envoyer", "error");
+      return;
+    }
+    
     setLoading(true);
 
     try {
-      // ✅ ÉTAPE 1 : Obtenir un token FRAIS
-      console.log("🔐 Obtention d'un token frais...");
-      const freshToken = await getValidToken();
+      // ✅ ÉTAPE 1 : Obtenir le token reCAPTCHA
+      console.log("🔐 Vérification du token reCAPTCHA...");
+      const token = await getValidToken();
       
-      if (!freshToken) {
-        addToast("❌ Impossible d'obtenir le token reCAPTCHA. Rafraîchis la page.", "error");
+      if (!token) {
         setLoading(false);
         return;
       }
 
-      console.log("🔐 Token frais obtenu:", freshToken.substring(0, 20) + "...");
+      console.log("🔐 Token reCAPTCHA obtenu:", token.substring(0, 20) + "...");
 
       // ✅ ÉTAPE 2 : Validation de la date programmée
       let scheduledAt = null;
@@ -339,16 +391,10 @@ const getValidToken = async () => {
         finalImageUrl = data.url;
       }
 
-      // ✅ ÉTAPE 4 : Envoi de la mutation avec le token FRAIS
+      // ✅ ÉTAPE 4 : Envoi de la mutation avec le token reCAPTCHA
       if (useAIContent) {
         if (useAI) {
-          if (!theme?.trim()) {
-            addToast("Le thème est obligatoire pour l'IA !", "error");
-            setLoading(false);
-            return;
-          }
-          
-          console.log("📤 Envoi generatePost avec token frais");
+          console.log("📤 Envoi generatePost avec token reCAPTCHA");
           
           await generatePostMutation({
             variables: {
@@ -357,43 +403,31 @@ const getValidToken = async () => {
               length,
               imageUrl: finalImageUrl,
               scheduledAt,
-              recaptchaToken: freshToken // ✅ TOKEN FRAIS
+              recaptchaToken: token
             }
           });
         } else {
           const rawContent = editorRef.current?.innerHTML || "";
-          if (!rawContent.trim() && !finalImageUrl) {
-            addToast("Le texte ou une image est obligatoire !", "error");
-            setLoading(false);
-            return;
-          }
-          
-          console.log("📤 Envoi createPost avec token frais");
+          console.log("📤 Envoi createPost avec token reCAPTCHA");
           
           await createPostMutation({
             variables: {
               content: rawContent,
               imageUrl: finalImageUrl,
               scheduledAt,
-              recaptchaToken: freshToken // ✅ TOKEN FRAIS
+              recaptchaToken: token
             }
           });
         }
       } else {
-        if (!finalImageUrl) {
-          addToast("⚠️ Vous devez générer ou uploader une image !", "error");
-          setLoading(false);
-          return;
-        }
-        
-        console.log("📤 Envoi createPost (visuel) avec token frais");
+        console.log("📤 Envoi createPost (visuel) avec token reCAPTCHA");
         
         await createPostMutation({
           variables: {
             content: "",
             imageUrl: finalImageUrl,
             scheduledAt,
-            recaptchaToken: freshToken // ✅ TOKEN FRAIS
+            recaptchaToken: token
           }
         });
       }
@@ -401,7 +435,19 @@ const getValidToken = async () => {
     } catch (err) {
       console.error("❌ Erreur handleGenerate:", err);
       const errorMsg = err.graphQLErrors?.[0]?.message || err.message || "Erreur inconnue";
-      addToast(`❌ ${errorMsg}`, "error");
+      
+      // Message spécifique pour les erreurs reCAPTCHA
+      if (errorMsg.includes("reCAPTCHA") || errorMsg.includes("captcha") || errorMsg.includes("token")) {
+        addToast("❌ Erreur de vérification reCAPTCHA. Le token est peut-être expiré (2min max). Veuillez revalider.", "error");
+        // Reset reCAPTCHA en cas d'erreur
+        setIsRecaptchaValidated(false);
+        setRecaptchaToken("");
+        if (recaptchaRef.current) {
+          recaptchaRef.current.reset();
+        }
+      } else {
+        addToast(`❌ ${errorMsg}`, "error");
+      }
       setLoading(false);
     }
   };
@@ -576,6 +622,7 @@ const getValidToken = async () => {
           <h3 className="font-semibold text-lg mb-4 text-gray-800">Générateur d'image IA</h3>
           <ImageGenerator
             setImageUrl={setImageUrl}
+            recaptchaRef={recaptchaRef}
             getValidToken={getValidToken}
             addToast={addToast}
           />
@@ -585,17 +632,38 @@ const getValidToken = async () => {
       {/* reCAPTCHA visible */}
       <div className="bg-white p-6 rounded-2xl shadow-md border border-gray-100">
         <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
-          🔒 Vérification de sécurité
+          🔒 Vérification de sécurité {isRecaptchaValidated && <span className="text-emerald-500 text-sm">✓ Validé</span>}
         </h3>
         <ReCAPTCHA
           ref={recaptchaRef}
           sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
           onChange={onRecaptchaChange}
-          size="normal"
+          onExpired={onRecaptchaExpired}
+          onErrored={onRecaptchaError}
+          size="normal" // Mode visible
+          theme="light"
         />
-        <p className="text-xs text-gray-500 mt-2">
-          ℹ️ Cochez la case reCAPTCHA avant d'envoyer
-        </p>
+        <div className="flex items-center justify-between mt-2">
+          <p className="text-xs text-gray-500">
+            {isRecaptchaValidated 
+              ? "✅ reCAPTCHA validé - Vous pouvez envoyer" 
+              : "ℹ️ Veuillez valider le reCAPTCHA avant d'envoyer"}
+          </p>
+          {isRecaptchaValidated && (
+            <button 
+              onClick={() => {
+                if (recaptchaRef.current) {
+                  recaptchaRef.current.reset();
+                  setRecaptchaToken("");
+                  setIsRecaptchaValidated(false);
+                }
+              }}
+              className="text-xs text-rose-600 hover:text-rose-800 font-medium"
+            >
+              Réinitialiser
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-2xl shadow-md border border-blue-100">
@@ -656,10 +724,15 @@ const getValidToken = async () => {
 
       <button
         onClick={handleGenerate}
-        disabled={loading}
-        className="w-full bg-blue-900 text-white px-6 py-4 rounded-xl font-bold shadow-lg hover:bg-blue-950 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-lg"
+        disabled={loading || !isRecaptchaValidated}
+        className={`w-full px-6 py-4 rounded-xl font-bold shadow-lg transition-all duration-200 text-lg ${
+          !isRecaptchaValidated 
+            ? "bg-gray-300 text-gray-500 cursor-not-allowed" 
+            : "bg-blue-900 text-white hover:bg-blue-950 disabled:opacity-50 disabled:cursor-not-allowed"
+        }`}
       >
-        {loading ? "⏳ Génération en cours..." : "✨ Générer / Enregistrer le post"}
+        {loading ? "⏳ Génération en cours..." : 
+         !isRecaptchaValidated ? "⏳ Valider le reCAPTCHA d'abord" : "✨ Générer / Enregistrer le post"}
       </button>
 
       {previewContent && (
@@ -675,7 +748,6 @@ const getValidToken = async () => {
         </div>
       )}
 
-    
       {/* Historique */}
       {postsHistory.length > 0 && (
         <div className="mt-8">
