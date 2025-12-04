@@ -137,11 +137,10 @@ function ImageGenerator({ setImageUrl, recaptchaRef, getValidToken, addToast }) 
     setLoading(true);
     
     try {
-      // ✅ Obtenir un token VALIDE
+      // ✅ Obtenir le token reCAPTCHA
       const token = await getValidToken();
       
       if (!token) {
-        addToast("❌ Veuillez valider le reCAPTCHA avant de générer l'image", "error");
         setLoading(false);
         return;
       }
@@ -208,10 +207,17 @@ export default function GenererPost() {
     setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 4000);
   };
 
+  // ✅ GESTION reCAPTCHA VISIBLE
   const onRecaptchaChange = (token) => {
     console.log("✅ reCAPTCHA validé, token reçu:", token ? token.substring(0, 20) + "..." : "null");
     setRecaptchaToken(token || "");
     setIsRecaptchaValidated(!!token);
+    
+    if (token) {
+      addToast("✅ reCAPTCHA validé !", "success");
+    } else {
+      setIsRecaptchaValidated(false);
+    }
   };
 
   const onRecaptchaExpired = () => {
@@ -228,22 +234,26 @@ export default function GenererPost() {
     addToast("❌ Erreur reCAPTCHA, veuillez réessayer", "error");
   };
 
-  // ✅ FONCTION POUR OBTENIR UN TOKEN VALIDE (reCAPTCHA visible)
+  // ✅ FONCTION POUR reCAPTCHA VISIBLE
   const getValidToken = async () => {
-    // Pour reCAPTCHA visible, on vérifie simplement si le token est valide
+    console.log("🔐 Vérification reCAPTCHA...");
+    
+    // Vérifier si l'utilisateur a coché la case
     if (!isRecaptchaValidated) {
-      console.log("❌ reCAPTCHA non validé par l'utilisateur");
-      addToast("❌ Veuillez valider le reCAPTCHA avant d'envoyer", "error");
+      addToast("❌ Veuillez cocher la case reCAPTCHA avant d'envoyer", "error");
       return null;
     }
 
+    // Vérifier si le token existe
     if (!recaptchaToken || recaptchaToken.trim() === "") {
       console.log("❌ Aucun token reCAPTCHA disponible");
       addToast("❌ Token reCAPTCHA manquant, veuillez revalider", "error");
       return null;
     }
 
-    console.log("✅ Token reCAPTCHA valide:", recaptchaToken.substring(0, 20) + "...");
+    console.log("✅ Token reCAPTCHA disponible:", recaptchaToken.substring(0, 20) + "...");
+    
+    // Pour reCAPTCHA visible, on utilise le token stocké
     return recaptchaToken;
   };
 
@@ -257,7 +267,7 @@ export default function GenererPost() {
     setTheme("");
     setTone("");
     
-    // Reset reCAPTCHA après succès (optionnel)
+    // Reset reCAPTCHA après succès
     setTimeout(() => {
       setRecaptchaToken("");
       setIsRecaptchaValidated(false);
@@ -302,7 +312,25 @@ export default function GenererPost() {
     onError: (error) => {
       console.error("❌ Erreur createPost:", error);
       const errorMessage = error.graphQLErrors?.[0]?.message || error.message;
-      addToast(`❌ ${errorMessage}`, "error");
+      
+      // Vérifier si c'est une erreur de token expiré
+      if (errorMessage && (
+        errorMessage.includes("expiré") || 
+        errorMessage.includes("expired") || 
+        errorMessage.includes("token") ||
+        errorMessage.includes("reCAPTCHA") ||
+        errorMessage.includes("captcha")
+      )) {
+        // Reset reCAPTCHA en cas d'expiration
+        setRecaptchaToken("");
+        setIsRecaptchaValidated(false);
+        if (recaptchaRef.current) {
+          recaptchaRef.current.reset();
+        }
+        addToast("❌ Le token reCAPTCHA a expiré. Veuillez le valider à nouveau.", "error");
+      } else {
+        addToast(`❌ ${errorMessage}`, "error");
+      }
       setLoading(false);
     },
   });
@@ -324,7 +352,7 @@ export default function GenererPost() {
   const handleGenerate = async () => {
     if (loading) return;
     
-    // Vérifications de base avant d'appeler reCAPTCHA
+    // Vérifications de base
     if (useAIContent) {
       if (useAI) {
         if (!theme?.trim()) {
@@ -345,9 +373,9 @@ export default function GenererPost() {
       }
     }
     
-    // Vérification reCAPTCHA
+    // ✅ Vérification IMPORTANTE : reCAPTCHA doit être validé
     if (!isRecaptchaValidated) {
-      addToast("❌ Veuillez valider le reCAPTCHA avant d'envoyer", "error");
+      addToast("❌ Veuillez cocher la case reCAPTCHA avant d'envoyer", "error");
       return;
     }
     
@@ -355,7 +383,7 @@ export default function GenererPost() {
 
     try {
       // ✅ ÉTAPE 1 : Obtenir le token reCAPTCHA
-      console.log("🔐 Vérification du token reCAPTCHA...");
+      console.log("🔐 Obtention du token reCAPTCHA...");
       const token = await getValidToken();
       
       if (!token) {
@@ -363,7 +391,7 @@ export default function GenererPost() {
         return;
       }
 
-      console.log("🔐 Token reCAPTCHA obtenu:", token.substring(0, 20) + "...");
+      console.log("🔐 Token obtenu:", token.substring(0, 20) + "...");
 
       // ✅ ÉTAPE 2 : Validation de la date programmée
       let scheduledAt = null;
@@ -391,10 +419,10 @@ export default function GenererPost() {
         finalImageUrl = data.url;
       }
 
-      // ✅ ÉTAPE 4 : Envoi de la mutation avec le token reCAPTCHA
+      // ✅ ÉTAPE 4 : Envoi de la mutation
       if (useAIContent) {
         if (useAI) {
-          console.log("📤 Envoi generatePost avec token reCAPTCHA");
+          console.log("📤 Envoi generatePost");
           
           await generatePostMutation({
             variables: {
@@ -408,7 +436,7 @@ export default function GenererPost() {
           });
         } else {
           const rawContent = editorRef.current?.innerHTML || "";
-          console.log("📤 Envoi createPost avec token reCAPTCHA");
+          console.log("📤 Envoi createPost");
           
           await createPostMutation({
             variables: {
@@ -420,7 +448,7 @@ export default function GenererPost() {
           });
         }
       } else {
-        console.log("📤 Envoi createPost (visuel) avec token reCAPTCHA");
+        console.log("📤 Envoi createPost (visuel)");
         
         await createPostMutation({
           variables: {
@@ -437,7 +465,13 @@ export default function GenererPost() {
       const errorMsg = err.graphQLErrors?.[0]?.message || err.message || "Erreur inconnue";
       
       // Message spécifique pour les erreurs reCAPTCHA
-      if (errorMsg.includes("reCAPTCHA") || errorMsg.includes("captcha") || errorMsg.includes("token")) {
+      if (errorMsg && (
+        errorMsg.includes("reCAPTCHA") || 
+        errorMsg.includes("captcha") || 
+        errorMsg.includes("token") ||
+        errorMsg.includes("expiré") ||
+        errorMsg.includes("expired")
+      )) {
         addToast("❌ Erreur de vérification reCAPTCHA. Le token est peut-être expiré (2min max). Veuillez revalider.", "error");
         // Reset reCAPTCHA en cas d'erreur
         setIsRecaptchaValidated(false);
@@ -629,25 +663,25 @@ export default function GenererPost() {
         </div>
       )}
 
-      {/* reCAPTCHA visible */}
+      {/* ✅ reCAPTCHA VISIBLE - IMPORTANT: size="normal" */}
       <div className="bg-white p-6 rounded-2xl shadow-md border border-gray-100">
         <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
           🔒 Vérification de sécurité {isRecaptchaValidated && <span className="text-emerald-500 text-sm">✓ Validé</span>}
         </h3>
         <ReCAPTCHA
           ref={recaptchaRef}
-          sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
+          sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY || "6LcKJSEsAAAAAEJEapu9xwjSXocPgKYQ1RTn2zgS"}
           onChange={onRecaptchaChange}
           onExpired={onRecaptchaExpired}
           onErrored={onRecaptchaError}
-          size="normal" // Mode visible
+          size="normal"  // ⬅️ CRITIQUE: "normal" pour reCAPTCHA visible
           theme="light"
         />
         <div className="flex items-center justify-between mt-2">
           <p className="text-xs text-gray-500">
             {isRecaptchaValidated 
-              ? "✅ reCAPTCHA validé - Vous pouvez envoyer" 
-              : "ℹ️ Veuillez valider le reCAPTCHA avant d'envoyer"}
+              ? "✅ reCAPTCHA validé - Envoi possible pendant 2 minutes" 
+              : "ℹ️ Veuillez cocher la case \"Je ne suis pas un robot\""}
           </p>
           {isRecaptchaValidated && (
             <button 
@@ -656,6 +690,7 @@ export default function GenererPost() {
                   recaptchaRef.current.reset();
                   setRecaptchaToken("");
                   setIsRecaptchaValidated(false);
+                  addToast("reCAPTCHA réinitialisé", "success");
                 }
               }}
               className="text-xs text-rose-600 hover:text-rose-800 font-medium"
@@ -722,6 +757,7 @@ export default function GenererPost() {
         )}
       </div>
 
+      {/* ✅ BOUTON DÉSACTIVÉ SI reCAPTCHA NON VALIDÉ */}
       <button
         onClick={handleGenerate}
         disabled={loading || !isRecaptchaValidated}
