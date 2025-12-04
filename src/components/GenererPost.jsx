@@ -106,7 +106,7 @@ function Toast({ message, type, onClose }) {
 }
 
 // Image Generator Component
-function ImageGenerator({ setImageUrl, recaptchaRef, getValidToken, addToast }) {
+function ImageGenerator({ setImageUrl, getValidToken, addToast }) {
   const [prompt, setPrompt] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -184,7 +184,6 @@ function ImageGenerator({ setImageUrl, recaptchaRef, getValidToken, addToast }) 
 // Main Component
 export default function GenererPost() {
   const recaptchaRef = useRef(null);
-  const [recaptchaToken, setRecaptchaToken] = useState("");
   const [useAIContent, setUseAIContent] = useState(true);
   const [useAI, setUseAI] = useState(true);
   const [theme, setTheme] = useState("");
@@ -207,46 +206,20 @@ export default function GenererPost() {
     setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 4000);
   };
 
-  const onRecaptchaChange = (token) => {
-    console.log("✅ reCAPTCHA validé, token reçu:", token ? token.substring(0, 20) + "..." : "null");
-    setRecaptchaToken(token || "");
-  };
 
   // ✅ FONCTION CRITIQUE : Obtenir un token VALIDE avant chaque requête
-  const getValidToken = async () => {
-    if (!recaptchaRef.current) {
-      console.error("❌ recaptchaRef non disponible");
-      return null;
-    }
+const getValidToken = async () => {
+  if (!recaptchaRef.current) return null;
 
-    try {
-      console.log("🔄 Vérification du token reCAPTCHA...");
-      
-      // Récupérer le token actuel (si l'utilisateur a coché la case)
-      let token = recaptchaRef.current.getValue();
-      
-      // Si pas de token ou token vide
-      if (!token || token.trim() === "") {
-        console.log("⚠️ Aucun token disponible - l'utilisateur doit cocher la case");
-        addToast("⚠️ Coche la case reCAPTCHA avant d'envoyer !", "error");
-        return null;
-      }
-      
-      console.log("✅ Token valide trouvé:", token.substring(0, 20) + "...");
-      
-      // Après utilisation, on reset pour la prochaine fois
-      setTimeout(() => {
-        if (recaptchaRef.current) {
-          recaptchaRef.current.reset();
-        }
-      }, 1000);
-      
-      return token;
-    } catch (error) {
-      console.error("❌ Erreur lors de l'obtention du token:", error);
-      return null;
-    }
-  };
+  try {
+    const token = await recaptchaRef.current.executeAsync(); // génère un token frais
+    recaptchaRef.current.reset(); // reset pour la prochaine utilisation
+    return token;
+  } catch (err) {
+    console.error("Erreur reCAPTCHA :", err);
+    return null;
+  }
+};
 
   const resetForm = () => {
     if (editorRef.current) editorRef.current.innerHTML = "";
@@ -260,7 +233,6 @@ export default function GenererPost() {
     
     // Reset reCAPTCHA après succès
     setTimeout(() => {
-      setRecaptchaToken("");
       if (recaptchaRef.current) {
         recaptchaRef.current.reset();
       }
@@ -601,7 +573,6 @@ export default function GenererPost() {
           <h3 className="font-semibold text-lg mb-4 text-gray-800">Générateur d'image IA</h3>
           <ImageGenerator
             setImageUrl={setImageUrl}
-            recaptchaRef={recaptchaRef}
             getValidToken={getValidToken}
             addToast={addToast}
           />
@@ -616,8 +587,7 @@ export default function GenererPost() {
         <ReCAPTCHA
           ref={recaptchaRef}
           sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
-          onChange={onRecaptchaChange}
-          size="normal"
+          size="invisible"
         />
         <p className="text-xs text-gray-500 mt-2">
           ℹ️ Le reCAPTCHA se régénère automatiquement avant chaque envoi
