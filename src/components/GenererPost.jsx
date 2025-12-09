@@ -248,7 +248,7 @@ export default function GenererPost() {
 
   // ✅ FONCTION POUR reCAPTCHA VISIBLE
   const getValidToken = async () => {
-    console.log("🔐 Vérification reCAPTCHA...");
+    console.log(" Vérification reCAPTCHA...");
     
     // Vérifier si l'utilisateur a coché la case
     if (!isRecaptchaValidated) {
@@ -329,7 +329,7 @@ export default function GenererPost() {
         setPostsHistory((prev) => [post, ...prev]);
         
         // ✅ MESSAGE DE SUCCÈS AMÉLIORÉ
-        let successMessage = "✅ Post créé avec succès !";
+        let successMessage = "Post créé avec succès !";
         if (post.scheduledAt) {
           const date = new Date(post.scheduledAt);
           successMessage = `📅 Post programmé pour le ${date.toLocaleDateString('fr-FR', {
@@ -378,7 +378,7 @@ export default function GenererPost() {
       setPostsHistory((prev) =>
         prev.map((p) => (p.id === updatedPost.id ? updatedPost : p))
       );
-      addToast("✅ Post publié avec succès !", "success");
+      addToast(" Post publié avec succès !", "success");
     },
     onError: (error) => {
       console.error("Erreur publication:", error);
@@ -459,7 +459,7 @@ export default function GenererPost() {
       // ✅ ÉTAPE 4 : Envoi de la mutation
       if (useAIContent) {
         if (useAI) {
-          console.log("📤 Envoi generatePost");
+          console.log(" Envoi generatePost");
           
           await generatePostMutation({
             variables: {
@@ -485,7 +485,7 @@ export default function GenererPost() {
           });
         }
       } else {
-        console.log("📤 Envoi createPost (visuel)");
+        console.log(" Envoi createPost (visuel)");
         
         await createPostMutation({
           variables: {
@@ -815,7 +815,7 @@ export default function GenererPost() {
              Génération en cours...
           </>
         ) : (
-          !isRecaptchaValidated ? "Valider le reCAPTCHA d'abord" : "✨ Générer / Enregistrer le post"
+          !isRecaptchaValidated ? "Valider le reCAPTCHA d'abord" : " Générer / Enregistrer le post"
         )}
       </button>
 
