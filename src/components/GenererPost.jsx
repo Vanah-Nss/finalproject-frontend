@@ -63,11 +63,7 @@ const GENERATE_POST = gql`
 `;
 
 const PUBLISH_POST = gql`
-  mutation PublishPos    l
-
-Profil
-
-Safidy sylvat($id: Int!) {
+  mutation PublishPost($id: Int!) {
     publishPost(id: $id) {
       post {
         id
