@@ -8,56 +8,25 @@ import {
   FiItalic,
   FiUnderline,
   FiList,
-  FiCalendar,
-  FiClock,
 } from "react-icons/fi";
 import ReCAPTCHA from "react-google-recaptcha";
 
-// GraphQL Mutations
 const CREATE_POST = gql`
   mutation CreatePost($content: String!, $imageUrl: String, $scheduledAt: String, $recaptchaToken: String!) {
     createPost(content: $content, imageUrl: $imageUrl, scheduledAt: $scheduledAt, recaptchaToken: $recaptchaToken) {
       success
       message
-      post {
-        id
-        content
-        status
-        imageUrl
-        createdAt
-        scheduledAt
-      }
+      post { id content status imageUrl createdAt scheduledAt }
     }
   }
 `;
 
 const GENERATE_POST = gql`
-  mutation GeneratePost(
-    $theme: String!
-    $tone: String
-    $length: String
-    $imageUrl: String
-    $scheduledAt: String
-    $recaptchaToken: String!
-  ) {
-    generatePost(
-      theme: $theme
-      tone: $tone
-      length: $length
-      imageUrl: $imageUrl
-      scheduledAt: $scheduledAt
-      recaptchaToken: $recaptchaToken
-    ) {
+  mutation GeneratePost($theme: String!, $tone: String, $length: String, $imageUrl: String, $scheduledAt: String, $recaptchaToken: String!) {
+    generatePost(theme: $theme, tone: $tone, length: $length, imageUrl: $imageUrl, scheduledAt: $scheduledAt, recaptchaToken: $recaptchaToken) {
       success
       message
-      post {
-        id
-        content
-        status
-        imageUrl
-        createdAt
-        scheduledAt
-      }
+      post { id content status imageUrl createdAt scheduledAt }
     }
   }
 `;
@@ -65,13 +34,7 @@ const GENERATE_POST = gql`
 const PUBLISH_POST = gql`
   mutation PublishPost($id: Int!) {
     publishPost(id: $id) {
-      post {
-        id
-        content
-        status
-        imageUrl
-        scheduledAt
-      }
+      post { id content status imageUrl scheduledAt }
     }
   }
 `;
@@ -86,77 +49,49 @@ const GENERATE_IMAGE = gql`
   }
 `;
 
-// Toast Component
 function Toast({ message, type, onClose }) {
-  const styles =
-    type === "success"
-      ? "bg-white border-l-4 border-emerald-500 text-gray-800"
-      : type === "error"
-      ? "bg-white border-l-4 border-rose-500 text-gray-800"
-      : "bg-white border-l-4 border-blue-500 text-gray-800";
-
+  const styles = type === "success" ? "bg-white border-l-4 border-emerald-500 text-gray-800" : "bg-white border-l-4 border-rose-500 text-gray-800";
   return (
-    <div className={`flex items-center gap-3 px-6 py-4 rounded-lg shadow-2xl ${styles} mb-3 backdrop-blur-sm animate-slideDown`}>
-      {type === "success" && <FiCheckCircle size={22} className="text-emerald-500" />}
-      {type === "error" && <FiXCircle size={22} className="text-rose-500" />}
+    <div className={`flex items-center gap-3 px-6 py-4 rounded-lg shadow-2xl ${styles} mb-3`}>
+      {type === "success" ? <FiCheckCircle size={22} className="text-emerald-500" /> : <FiXCircle size={22} className="text-rose-500" />}
       <span className="flex-1 font-medium">{message}</span>
       <button onClick={onClose} className="text-gray-400 hover:text-gray-600 font-bold text-lg">✕</button>
     </div>
   );
 }
 
-// Image Generator Component
-function ImageGenerator({ setImageUrl, recaptchaRef, getValidToken, addToast }) {
+function ImageGenerator({ setImageUrl, getValidToken, addToast }) {
   const [prompt, setPrompt] = useState("");
   const [loading, setLoading] = useState(false);
 
   const [generateImageMutation] = useMutation(GENERATE_IMAGE, {
     onCompleted: (data) => {
+      setLoading(false);
       if (data.generateImage.success) {
         setImageUrl(data.generateImage.imageUrl);
         addToast("✨ Image générée avec succès !", "success");
       } else {
-        addToast(`${data.generateImage.message}`, "error");
+        addToast(`❌ ${data.generateImage.message}`, "error");
       }
-      setLoading(false);
     },
     onError: (err) => {
-      console.error(err);
-      addToast(" Erreur lors de la génération de l'image.", "error");
       setLoading(false);
+      addToast("❌ Erreur lors de la génération de l'image.", "error");
     },
   });
 
   const handleGenerate = async () => {
     if (!prompt.trim()) {
-      addToast(" Entre un prompt pour générer l'image !", "error");
+      addToast("⚠️ Entre un prompt pour générer l'image !", "error");
       return;
     }
-    if (loading) return;
-    
     setLoading(true);
-    
-    try {
-      // ✅ Obtenir le token reCAPTCHA
-      const token = await getValidToken();
-      
-      if (!token) {
-        setLoading(false);
-        return;
-      }
-
-      await generateImageMutation({
-        variables: {
-          prompt,
-          recaptchaToken: token
-        }
-      });
-    } catch (err) {
-      console.error("❌ Erreur generateImage:", err);
-      const errorMsg = err.graphQLErrors?.[0]?.message || err.message || "Erreur inconnue";
-      addToast(`❌ ${errorMsg}`, "error");
+    const token = await getValidToken();
+    if (!token) {
       setLoading(false);
+      return;
     }
+    await generateImageMutation({ variables: { prompt, recaptchaToken: token } });
   };
 
   return (
@@ -166,31 +101,22 @@ function ImageGenerator({ setImageUrl, recaptchaRef, getValidToken, addToast }) 
         value={prompt}
         onChange={(e) => setPrompt(e.target.value)}
         placeholder="Tape ton prompt ici (ex: une plage au coucher du soleil)"
-        className="border border-gray-300 p-3 rounded-2xl shadow-sm w-full focus:ring-2 focus:ring-blue-900 focus:border-transparent"
+        className="border border-gray-300 p-3 rounded-2xl shadow-sm w-full focus:ring-2 focus:ring-blue-900"
       />
-
       <button
         onClick={handleGenerate}
         disabled={loading}
-        className="bg-blue-900 text-white px-5 py-3 rounded-xl hover:bg-blue-950 shadow-md font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="bg-blue-900 text-white px-5 py-3 rounded-xl hover:bg-blue-950 shadow-md font-semibold disabled:opacity-50"
       >
-        {loading ? (
-          <span className="flex items-center justify-center gap-2">
-            <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            Génération en cours...
-          </span>
-        ) : "✨ Générer l'image"}
+        {loading ? "⏳ Génération en cours..." : "✨ Générer l'image"}
       </button>
     </div>
   );
 }
 
-// Main Component
 export default function GenererPost() {
   const recaptchaRef = useRef(null);
+  const editorRef = useRef();
   const [recaptchaToken, setRecaptchaToken] = useState("");
   const [isRecaptchaValidated, setIsRecaptchaValidated] = useState(false);
   const [useAIContent, setUseAIContent] = useState(true);
@@ -206,8 +132,6 @@ export default function GenererPost() {
   const [scheduled, setScheduled] = useState(false);
   const [scheduledDate, setScheduledDate] = useState("");
   const [scheduledTime, setScheduledTime] = useState("");
-  const [previewContent, setPreviewContent] = useState("");
-  const editorRef = useRef();
 
   const addToast = (message, type) => {
     const id = Date.now();
@@ -215,52 +139,23 @@ export default function GenererPost() {
     setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 4000);
   };
 
-  // ✅ GESTION reCAPTCHA VISIBLE
   const onRecaptchaChange = (token) => {
-    console.log("✅ reCAPTCHA validé, token reçu:", token ? token.substring(0, 20) + "..." : "null");
     setRecaptchaToken(token || "");
     setIsRecaptchaValidated(!!token);
-    
-    if (token) {
-      addToast("✅ reCAPTCHA validé !", "success");
-    } else {
-      setIsRecaptchaValidated(false);
-    }
+    if (token) addToast("✅ reCAPTCHA validé !", "success");
   };
 
   const onRecaptchaExpired = () => {
-    console.log("⚠️ reCAPTCHA expiré");
     setRecaptchaToken("");
     setIsRecaptchaValidated(false);
-    addToast("⚠️ Le reCAPTCHA a expiré, veuillez le valider à nouveau", "error");
+    addToast("⚠️ Le reCAPTCHA a expiré", "error");
   };
 
-  const onRecaptchaError = (error) => {
-    console.error("❌ Erreur reCAPTCHA:", error);
-    setRecaptchaToken("");
-    setIsRecaptchaValidated(false);
-    addToast("❌ Erreur reCAPTCHA, veuillez réessayer", "error");
-  };
-
-  // ✅ FONCTION POUR reCAPTCHA VISIBLE
   const getValidToken = async () => {
-    console.log(" Vérification reCAPTCHA...");
-    
-    // Vérifier si l'utilisateur a coché la case
-    if (!isRecaptchaValidated) {
-      addToast("❌ Veuillez cocher la case reCAPTCHA avant d'envoyer", "error");
+    if (!isRecaptchaValidated || !recaptchaToken) {
+      addToast("❌ Veuillez valider le reCAPTCHA", "error");
       return null;
     }
-
-    // Vérifier si le token existe
-    if (!recaptchaToken || recaptchaToken.trim() === "") {
-      console.log("❌ Aucun token reCAPTCHA disponible");
-      addToast("❌ Token reCAPTCHA manquant, veuillez revalider", "error");
-      return null;
-    }
-
-    console.log("✅ Token reCAPTCHA disponible:", recaptchaToken.substring(0, 20) + "...");
-    
     return recaptchaToken;
   };
 
@@ -273,14 +168,10 @@ export default function GenererPost() {
     setScheduledTime("");
     setTheme("");
     setTone("");
-    
-    // Reset reCAPTCHA après succès
     setTimeout(() => {
       setRecaptchaToken("");
       setIsRecaptchaValidated(false);
-      if (recaptchaRef.current) {
-        recaptchaRef.current.reset();
-      }
+      if (recaptchaRef.current) recaptchaRef.current.reset();
     }, 500);
   };
 
@@ -288,32 +179,16 @@ export default function GenererPost() {
     onCompleted: (data) => {
       setLoading(false);
       if (data.generatePost.success && data.generatePost.post) {
-        const post = data.generatePost.post;
-        setPostsHistory((prev) => [post, ...prev]);
-        
-        // ✅ MESSAGE DE SUCCÈS POUR POST IA
-        let successMessage = "✨ Post IA généré avec succès !";
-        if (post.scheduledAt) {
-          const date = new Date(post.scheduledAt);
-          successMessage = `📅 Post IA programmé pour le ${date.toLocaleDateString('fr-FR', {
-            day: 'numeric',
-            month: 'long',
-            hour: '2-digit',
-            minute: '2-digit'
-          })} !`;
-        }
-        
-        addToast(successMessage, "success");
+        setPostsHistory((prev) => [data.generatePost.post, ...prev]);
+        addToast(data.generatePost.post.scheduledAt ? "📅 Post IA programmé !" : "✨ Post IA généré !", "success");
         resetForm();
       } else {
-        addToast(data.generatePost.message || "❌ Erreur de génération", "error");
+        addToast(data.generatePost.message || "❌ Erreur", "error");
       }
     },
     onError: (error) => {
-      console.error("❌ Erreur generatePost:", error);
-      const errorMessage = error.graphQLErrors?.[0]?.message || error.message;
-      addToast(`❌ ${errorMessage}`, "error");
       setLoading(false);
+      addToast(`❌ ${error.graphQLErrors?.[0]?.message || error.message}`, "error");
     },
   });
 
@@ -321,244 +196,98 @@ export default function GenererPost() {
     onCompleted: (data) => {
       setLoading(false);
       if (data.createPost.success && data.createPost.post) {
-        const post = data.createPost.post;
-        setPostsHistory((prev) => [post, ...prev]);
-        
-        // ✅ MESSAGE DE SUCCÈS AMÉLIORÉ
-        let successMessage = "Post créé avec succès !";
-        if (post.scheduledAt) {
-          const date = new Date(post.scheduledAt);
-          successMessage = `📅 Post programmé pour le ${date.toLocaleDateString('fr-FR', {
-            day: 'numeric',
-            month: 'long',
-            hour: '2-digit',
-            minute: '2-digit'
-          })} !`;
-        }
-        
-        addToast(successMessage, "success");
+        setPostsHistory((prev) => [data.createPost.post, ...prev]);
+        addToast(data.createPost.post.scheduledAt ? "📅 Post programmé !" : "✅ Post créé !", "success");
         resetForm();
       } else {
-        addToast(data.createPost.message || "❌ Erreur lors de la création", "error");
+        addToast(data.createPost.message || "❌ Erreur", "error");
       }
     },
     onError: (error) => {
-      console.error("❌ Erreur createPost:", error);
-      const errorMessage = error.graphQLErrors?.[0]?.message || error.message;
-      
-      // Vérifier si c'est une erreur de token expiré
-      if (errorMessage && (
-        errorMessage.includes("expiré") || 
-        errorMessage.includes("expired") || 
-        errorMessage.includes("token") ||
-        errorMessage.includes("reCAPTCHA") ||
-        errorMessage.includes("captcha")
-      )) {
-        // Reset reCAPTCHA en cas d'expiration
+      setLoading(false);
+      const msg = error.graphQLErrors?.[0]?.message || error.message;
+      if (msg?.includes("token") || msg?.includes("reCAPTCHA")) {
         setRecaptchaToken("");
         setIsRecaptchaValidated(false);
-        if (recaptchaRef.current) {
-          recaptchaRef.current.reset();
-        }
-        addToast("❌ Le token reCAPTCHA a expiré. Veuillez le valider à nouveau.", "error");
-      } else {
-        addToast(`❌ ${errorMessage}`, "error");
+        if (recaptchaRef.current) recaptchaRef.current.reset();
       }
-      setLoading(false);
+      addToast(`❌ ${msg}`, "error");
     },
   });
 
   const [publishPostMutation] = useMutation(PUBLISH_POST, {
     onCompleted: (data) => {
-      const updatedPost = data.publishPost.post;
-      setPostsHistory((prev) =>
-        prev.map((p) => (p.id === updatedPost.id ? updatedPost : p))
-      );
-      addToast(" Post publié avec succès !", "success");
+      setPostsHistory((prev) => prev.map((p) => (p.id === data.publishPost.post.id ? data.publishPost.post : p)));
+      addToast("✅ Post publié !", "success");
     },
-    onError: (error) => {
-      console.error("Erreur publication:", error);
-      addToast(`❌ Erreur: ${error.message}`, "error");
-    },
+    onError: (error) => addToast(`❌ ${error.message}`, "error"),
   });
 
   const handleGenerate = async () => {
     if (loading) return;
     
-    // Vérifications de base
-    if (useAIContent) {
-      if (useAI) {
-        if (!theme?.trim()) {
-          addToast("Le thème est obligatoire pour l'IA !", "error");
-          return;
-        }
-      } else {
-        const rawContent = editorRef.current?.innerHTML || "";
-        if (!rawContent.trim() && !imageUrl && !imageFile) {
-          addToast("Le texte ou une image est obligatoire !", "error");
-          return;
-        }
-      }
-    } else {
-      if (!imageUrl && !imageFile) {
-        addToast("⚠️ Vous devez générer ou uploader une image !", "error");
-        return;
-      }
+    if (useAIContent && useAI && !theme?.trim()) {
+      addToast("⚠️ Le thème est obligatoire !", "error");
+      return;
     }
-    
-    // ✅ Vérification IMPORTANTE : reCAPTCHA doit être validé
+    if (useAIContent && !useAI && !editorRef.current?.innerHTML.trim() && !imageUrl && !imageFile) {
+      addToast("⚠️ Le texte ou une image est obligatoire !", "error");
+      return;
+    }
+    if (!useAIContent && !imageUrl && !imageFile) {
+      addToast("⚠️ Vous devez générer ou uploader une image !", "error");
+      return;
+    }
     if (!isRecaptchaValidated) {
-      addToast("❌ Veuillez cocher la case reCAPTCHA avant d'envoyer", "error");
+      addToast("❌ Veuillez valider le reCAPTCHA", "error");
       return;
     }
     
     setLoading(true);
+    
+    const token = await getValidToken();
+    if (!token) {
+      setLoading(false);
+      return;
+    }
 
-    try {
-      // ✅ ÉTAPE 1 : Obtenir le token reCAPTCHA
-      console.log("🔐 Obtention du token reCAPTCHA...");
-      const token = await getValidToken();
-      
-      if (!token) {
+    let scheduledAt = null;
+    if (scheduled && scheduledDate && scheduledTime) {
+      const dateTime = new Date(`${scheduledDate}T${scheduledTime}:00`);
+      if (isNaN(dateTime.getTime())) {
+        addToast("❌ Date invalide", "error");
         setLoading(false);
         return;
       }
-
-      console.log("🔐 Token obtenu:", token.substring(0, 20) + "...");
-
-      // ✅ ÉTAPE 2 : Validation de la date programmée
-      let scheduledAt = null;
-      if (scheduled && scheduledDate && scheduledTime) {
-        const dateTime = new Date(`${scheduledDate}T${scheduledTime}:00`);
-        if (isNaN(dateTime.getTime())) {
-          addToast("❌ Date ou heure invalide", "error");
-          setLoading(false);
-          return;
-        }
-        scheduledAt = dateTime.toISOString();
-      }
-
-      // ✅ ÉTAPE 3 : Upload de l'image si nécessaire
-      let finalImageUrl = imageUrl || null;
-      if (imageFile) {
-        const formData = new FormData();
-        formData.append("file", imageFile);
-        const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000"}/api/upload-image`, {
-          method: "POST",
-          body: formData,
-        });
-        const data = await res.json();
-        if (!data.url) throw new Error("Erreur upload image");
-        finalImageUrl = data.url;
-      }
-
-      // ✅ ÉTAPE 4 : Envoi de la mutation
-      if (useAIContent) {
-        if (useAI) {
-          console.log(" Envoi generatePost");
-          
-          await generatePostMutation({
-            variables: {
-              theme,
-              tone: tone || null,
-              length,
-              imageUrl: finalImageUrl,
-              scheduledAt,
-              recaptchaToken: token
-            }
-          });
-        } else {
-          const rawContent = editorRef.current?.innerHTML || "";
-          console.log("Envoi createPost");
-          
-          await createPostMutation({
-            variables: {
-              content: rawContent,
-              imageUrl: finalImageUrl,
-              scheduledAt,
-              recaptchaToken: token
-            }
-          });
-        }
-      } else {
-        console.log(" Envoi createPost (visuel)");
-        
-        await createPostMutation({
-          variables: {
-            content: "",
-            imageUrl: finalImageUrl,
-            scheduledAt,
-            recaptchaToken: token
-          }
-        });
-      }
-
-    } catch (err) {
-      console.error("❌ Erreur handleGenerate:", err);
-      const errorMsg = err.graphQLErrors?.[0]?.message || err.message || "Erreur inconnue";
-      
-      // Message spécifique pour les erreurs reCAPTCHA
-      if (errorMsg && (
-        errorMsg.includes("reCAPTCHA") || 
-        errorMsg.includes("captcha") || 
-        errorMsg.includes("token") ||
-        errorMsg.includes("expiré") ||
-        errorMsg.includes("expired")
-      )) {
-        addToast("❌ Erreur de vérification reCAPTCHA. Le token est peut-être expiré (2min max). Veuillez revalider.", "error");
-        // Reset reCAPTCHA en cas d'erreur
-        setIsRecaptchaValidated(false);
-        setRecaptchaToken("");
-        if (recaptchaRef.current) {
-          recaptchaRef.current.reset();
-        }
-      } else {
-        addToast(`❌ ${errorMsg}`, "error");
-      }
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    let content = "";
-    const finalImageUrl = imageFile ? URL.createObjectURL(imageFile) : imageUrl;
-
-    if (useAIContent) {
-      if (useAI) {
-        content = `<p><strong>Thème :</strong> ${theme || "—"}</p>
-                   <p><strong>Ton :</strong> ${tone || "—"}</p>
-                   <p><strong>Longueur :</strong> ${length}</p>`;
-      } else if (editorRef.current) {
-        content = editorRef.current.innerHTML || "";
-      }
-    } else {
-      content = finalImageUrl ? `<p>Image :</p><img src="${finalImageUrl}" style="max-width:100%; border-radius:8px;" />` : "";
+      scheduledAt = dateTime.toISOString();
     }
 
-    setPreviewContent(content);
+    let finalImageUrl = imageUrl || null;
+    if (imageFile) {
+      const formData = new FormData();
+      formData.append("file", imageFile);
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000"}/api/upload-image`, {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (!data.url) {
+        addToast("❌ Erreur upload image", "error");
+        setLoading(false);
+        return;
+      }
+      finalImageUrl = data.url;
+    }
 
-    return () => {
-      if (imageFile && finalImageUrl) URL.revokeObjectURL(finalImageUrl);
-    };
-  }, [theme, tone, length, imageFile, imageUrl, useAIContent, useAI]);
-
-  const copyContent = (content) => {
-    const textOnly = content.replace(/<[^>]*>?/gm, "").trim();
-    navigator.clipboard.writeText(textOnly);
-    addToast(" Contenu copié !", "success");
-  };
-
-  const handlePublish = async (id, content) => {
     try {
-      const textOnly = content.replace(/<[^>]*>?/gm, "").trim();
-      const linkedInUrl = textOnly
-        ? `https://www.linkedin.com/feed/?shareActive=true&text=${encodeURIComponent(textOnly)}`
-        : "https://www.linkedin.com/feed/";
-      window.open(linkedInUrl, "_blank", "width=800,height=600");
-      await publishPostMutation({ variables: { id: parseInt(id) } });
+      if (useAIContent && useAI) {
+        await generatePostMutation({ variables: { theme, tone: tone || null, length, imageUrl: finalImageUrl, scheduledAt, recaptchaToken: token } });
+      } else {
+        await createPostMutation({ variables: { content: useAIContent ? (editorRef.current?.innerHTML || "") : "", imageUrl: finalImageUrl, scheduledAt, recaptchaToken: token } });
+      }
     } catch (err) {
-      console.error("Erreur publication:", err);
-      addToast("❌ Erreur lors de la publication", "error");
+      setLoading(false);
+      addToast(`❌ ${err.message}`, "error");
     }
   };
 
@@ -574,95 +303,58 @@ export default function GenererPost() {
     }
   };
 
+  const handlePublish = async (id, content) => {
+    const textOnly = content.replace(/<[^>]*>?/gm, "").trim();
+    const linkedInUrl = textOnly ? `https://www.linkedin.com/feed/?shareActive=true&text=${encodeURIComponent(textOnly)}` : "https://www.linkedin.com/feed/";
+    window.open(linkedInUrl, "_blank", "width=800,height=600");
+    await publishPostMutation({ variables: { id: parseInt(id) } });
+  };
+
+  const copyContent = (content) => {
+    navigator.clipboard.writeText(content.replace(/<[^>]*>?/gm, "").trim());
+    addToast("📋 Contenu copié !", "success");
+  };
+
   return (
     <div className="space-y-6 p-4 max-w-5xl mx-auto">
-      <div className="fixed top-5 right-5 left-5 md:left-auto md:w-96 flex flex-col items-stretch z-50">
-        {toasts.map((t) => (
-          <Toast key={t.id} message={t.message} type={t.type} onClose={() => setToasts((prev) => prev.filter((x) => x.id !== t.id))} />
-        ))}
+      <div className="fixed top-5 right-5 left-5 md:left-auto md:w-96 flex flex-col z-50">
+        {toasts.map((t) => <Toast key={t.id} message={t.message} type={t.type} onClose={() => setToasts((prev) => prev.filter((x) => x.id !== t.id))} />)}
       </div>
 
       <div className="text-center">
-  <h2 className="text-5xl font-black tracking-tight text-blue-900">Générateur de post</h2>
-        <p className="text-xl text-gray-700 mt-2">
-          Générez vos contenus textuels et visuels à l'aide de l'IA ou sans IA.
-        </p>
+        <h2 className="text-5xl font-black text-blue-900">Générateur de post</h2>
+        <p className="text-xl text-gray-700 mt-2">Générez vos contenus avec ou sans IA</p>
       </div>
 
-  <div className="flex gap-4 mt-6 justify-center">
-        <button
-          className={`px-6 py-3 rounded-xl font-bold text-lg shadow-sm transition-all ${
-            useAIContent
-              ? "bg-blue-900 text-white"
-              : "bg-blue-50 text-blue-900 hover:bg-blue-100"
-          }`}
-          onClick={() => setUseAIContent(true)}
-        >
-          Contenu Textuel
-        </button>
-        <button
-          className={`px-6 py-3 rounded-xl font-bold text-lg shadow-sm transition-all ${
-            !useAIContent
-              ? "bg-blue-900 text-white"
-              : "bg-blue-50 text-blue-900 hover:bg-blue-100"
-          }`}
-          onClick={() => setUseAIContent(false)}
-        >
-          Contenu Visuel
-        </button>
+      <div className="flex gap-4 justify-center">
+        <button className={`px-6 py-3 rounded-xl font-bold shadow-sm transition-all ${useAIContent ? "bg-blue-900 text-white" : "bg-blue-50 text-blue-900"}`} onClick={() => setUseAIContent(true)}>📝 Contenu Textuel</button>
+        <button className={`px-6 py-3 rounded-xl font-bold shadow-sm transition-all ${!useAIContent ? "bg-blue-900 text-white" : "bg-blue-50 text-blue-900"}`} onClick={() => setUseAIContent(false)}>🖼️ Contenu Visuel</button>
       </div>
 
-
- 
       {useAIContent && (
-        <div className="mt-6">
-          <div className="flex gap-6 mt-6">
+        <div className="bg-white p-6 rounded-2xl shadow-md border">
+          <div className="flex gap-6 mb-6">
             <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="radio"
-                checked={useAI}
-                onChange={() => setUseAI(true)}
-                className="w-5 h-5"
-              />
-              <span className="font-medium">Avec IA</span>
+              <input type="radio" checked={useAI} onChange={() => setUseAI(true)} className="w-5 h-5" />
+              <span className="font-medium">🤖 Avec IA</span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="radio"
-                checked={!useAI}
-                onChange={() => setUseAI(false)}
-                className="w-5 h-5"
-              />
-              <span className="font-medium">Texte manuel</span>
+              <input type="radio" checked={!useAI} onChange={() => setUseAI(false)} className="w-5 h-5" />
+              <span className="font-medium">✍️ Texte manuel</span>
             </label>
           </div>
 
-
           {useAI ? (
-            <div className="flex flex-col md:flex-row gap-4 mt-4">
-              <input 
-                type="text" 
-                placeholder="Thème (ex: IA dans l'éducation)" 
-                value={theme} 
-                onChange={(e) => setTheme(e.target.value)} 
-                className="border border-gray-300 p-3 rounded-xl flex-1 shadow-sm focus:ring-2 focus:ring-blue-900 focus:border-transparent" 
-              />
-              <select 
-                value={tone} 
-                onChange={(e) => setTone(e.target.value)} 
-                className="border border-gray-300 p-3 rounded-xl flex-1 shadow-sm focus:ring-2 focus:ring-blue-900 focus:border-transparent"
-              >
-                <option value="">-- Choisir le ton --</option>
+            <div className="flex flex-col md:flex-row gap-4">
+              <input type="text" placeholder="Thème (ex: IA dans l'éducation)" value={theme} onChange={(e) => setTheme(e.target.value)} className="border p-3 rounded-xl flex-1 shadow-sm focus:ring-2 focus:ring-blue-900" />
+              <select value={tone} onChange={(e) => setTone(e.target.value)} className="border p-3 rounded-xl flex-1 shadow-sm">
+                <option value="">-- Ton --</option>
                 <option value="professionnel">Professionnel</option>
                 <option value="amical">Amical</option>
                 <option value="humoristique">Humoristique</option>
                 <option value="motivant">Motivant</option>
               </select>
-              <select 
-                value={length} 
-                onChange={(e) => setLength(e.target.value)} 
-                className="border border-gray-300 p-3 rounded-xl flex-1 shadow-sm focus:ring-2 focus:ring-blue-900 focus:border-transparent"
-              >
+              <select value={length} onChange={(e) => setLength(e.target.value)} className="border p-3 rounded-xl flex-1 shadow-sm">
                 <option value="court">Court</option>
                 <option value="moyen">Moyen</option>
                 <option value="long">Long</option>
@@ -670,215 +362,84 @@ export default function GenererPost() {
             </div>
           ) : (
             <>
-              <div className="flex gap-3 mt-4">
-                <button onClick={() => document.execCommand("bold")} className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"><FiBold /></button>
-                <button onClick={() => document.execCommand("italic")} className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"><FiItalic /></button>
-                <button onClick={() => document.execCommand("underline")} className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"><FiUnderline /></button>
-                <button onClick={() => document.execCommand("insertUnorderedList")} className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"><FiList /></button>
+              <div className="flex gap-3 mb-4">
+                <button onClick={() => document.execCommand("bold")} className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200"><FiBold /></button>
+                <button onClick={() => document.execCommand("italic")} className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200"><FiItalic /></button>
+                <button onClick={() => document.execCommand("underline")} className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200"><FiUnderline /></button>
+                <button onClick={() => document.execCommand("insertUnorderedList")} className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200"><FiList /></button>
               </div>
-              <div 
-                ref={editorRef} 
-                contentEditable 
-                suppressContentEditableWarning 
-                className="border border-gray-300 p-4 rounded-xl min-h-[150px] text-lg shadow-sm focus:ring-2 focus:ring-blue-900 focus:border-transparent mt-4"
-                onInput={() => setPreviewContent(editorRef.current?.innerHTML)}
-              />
+              <div ref={editorRef} contentEditable suppressContentEditableWarning className="border p-4 rounded-xl min-h-[150px] shadow-sm focus:ring-2 focus:ring-blue-900" />
             </>
           )}
 
-          <div className="mt-4">
-            <label className="flex items-center gap-2 cursor-pointer bg-gray-50 px-4 py-3 rounded-xl hover:bg-gray-100 transition-colors border border-gray-200">
-              <FiUpload className="text-blue-900" />
-              <span className="font-medium text-gray-700">📎 Ajouter une image (optionnel)</span>
-              <input 
-                type="file" 
-                accept="image/*" 
-                onChange={handleImageUpload}
-                className="hidden"
-              />
-            </label>
-            {imageFile && (
-              <div className="mt-2 text-sm text-green-600 flex items-center gap-2">
-                <FiCheckCircle />
-                <span>{imageFile.name}</span>
-              </div>
-            )}
-          </div>
+          <label className="flex items-center gap-2 cursor-pointer bg-gray-50 px-4 py-3 rounded-xl hover:bg-gray-100 mt-4 border">
+            <FiUpload className="text-blue-900" />
+            <span className="font-medium">📎 Ajouter une image (optionnel)</span>
+            <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+          </label>
+          {imageFile && <div className="mt-2 text-sm text-green-600 flex items-center gap-2"><FiCheckCircle /><span>{imageFile.name}</span></div>}
         </div>
       )}
 
       {!useAIContent && (
-        <div className="bg-white p-6 rounded-2xl shadow-md border border-gray-100">
-          <h3 className="font-semibold text-lg mb-4 text-gray-800">Générateur d'image IA</h3>
-          <ImageGenerator
-            setImageUrl={setImageUrl}
-            recaptchaRef={recaptchaRef}
-            getValidToken={getValidToken}
-            addToast={addToast}
-          />
+        <div className="bg-white p-6 rounded-2xl shadow-md border">
+          <h3 className="font-semibold text-lg mb-4">🎨 Générateur d'image IA</h3>
+          <ImageGenerator setImageUrl={setImageUrl} getValidToken={getValidToken} addToast={addToast} />
+          {(imageUrl || imageFile) && (
+            <div className="mt-6 bg-gray-50 p-6 rounded-xl border">
+              <p className="mb-3"><strong>👁️ Prévisualisation :</strong></p>
+              <img src={imageUrl || URL.createObjectURL(imageFile)} alt="Preview" className="w-full max-w-sm rounded-lg shadow-sm border" />
+            </div>
+          )}
         </div>
       )}
 
-      {/* ✅ reCAPTCHA VISIBLE */}
-      <div className="bg-white p-6 rounded-2xl shadow-md border border-gray-100">
+      <div className="bg-white p-6 rounded-2xl shadow-md border">
         <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
-           Vérification de sécurité {isRecaptchaValidated && <span className="text-emerald-500 text-sm">✓ Validé</span>}
+          🔒 Vérification {isRecaptchaValidated && <span className="text-emerald-500 text-sm">✓</span>}
         </h3>
         <ReCAPTCHA
           ref={recaptchaRef}
           sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY || "6LcKJSEsAAAAAEJEapu9xwjSXocPgKYQ1RTn2zgS"}
           onChange={onRecaptchaChange}
           onExpired={onRecaptchaExpired}
-          onErrored={onRecaptchaError}
-          size="normal"
-          theme="light"
         />
-        <div className="flex items-center justify-between mt-2">
-          <p className="text-xs text-gray-500">
-            {isRecaptchaValidated 
-              ? "reCAPTCHA validé - Envoi possible pendant 2 minutes" 
-              : "ℹ Veuillez cocher la case \"Je ne suis pas un robot\""}
-          </p>
-          {isRecaptchaValidated && (
-            <button 
-              onClick={() => {
-                if (recaptchaRef.current) {
-                  recaptchaRef.current.reset();
-                  setRecaptchaToken("");
-                  setIsRecaptchaValidated(false);
-                  addToast("reCAPTCHA réinitialisé", "success");
-                }
-              }}
-              className="text-xs text-rose-600 hover:text-rose-800 font-medium"
-            >
-              Réinitialiser
-            </button>
-          )}
-        </div>
+        <p className="text-xs text-gray-500 mt-2">{isRecaptchaValidated ? "✅ Validé" : "ℹ️ Veuillez cocher la case"}</p>
       </div>
 
-       <div className="flex items-center gap-4 mt-4">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={scheduled}
-                onChange={() => setScheduled(!scheduled)}
-                className="w-5 h-5"
-              />
-              <span className="font-medium">📅 Programmer la publication</span>
-            </label>
-          </div>
+      <div className="flex items-center gap-4">
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" checked={scheduled} onChange={() => setScheduled(!scheduled)} className="w-5 h-5" />
+          <span className="font-medium">📅 Programmer</span>
+        </label>
+      </div>
 
-          {scheduled && (
-            <div className="flex flex-col md:flex-row gap-4 mt-3">
-              <div className="flex flex-col flex-1">
-                <label className="text-sm text-gray-600 mb-1">Date de publication</label>
-                <input
-                  type="date"
-                  value={scheduledDate}
-                  onChange={(e) => setScheduledDate(e.target.value)}
-                  className="border border-gray-300 p-3 rounded-xl shadow-sm"
-                  min={new Date().toISOString().split("T")[0]}
-                />
-              </div>
-              <div className="flex flex-col flex-1">
-                <label className="text-sm text-gray-600 mb-1">Heure de publication</label>
-                <input
-                  type="time"
-                  value={scheduledTime}
-                  onChange={(e) => setScheduledTime(e.target.value)}
-                  className="border border-gray-300 p-3 rounded-xl shadow-sm"
-                />
-              </div>
-            </div>
-          )}
-
-      {/* ✅ BOUTON AMÉLIORÉ AVEC ANIMATION */}
-      <button
-        onClick={handleGenerate}
-        disabled={loading || !isRecaptchaValidated}
-        className={`w-full px-6 py-4 rounded-xl font-bold shadow-lg transition-all duration-200 text-lg flex items-center justify-center gap-3 ${
-          !isRecaptchaValidated 
-            ? "bg-gray-300 text-gray-500 cursor-not-allowed" 
-            : loading
-              ? "bg-blue-700 text-white"
-              : "bg-blue-900 text-white hover:bg-blue-950"
-        }`}
-      >
-        {loading ? (
-          <>
-            <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-             Génération en cours...
-          </>
-        ) : (
-          !isRecaptchaValidated ? "Valider le reCAPTCHA d'abord" : " Générer / Enregistrer le post"
-        )}
-      </button>
-
-       <div className="bg-white p-8 rounded-2xl shadow-sm border border-blue-200">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2 tracking-wide">
-              Prévisualisation
-            </h3>
-
-            {(imageUrl || imageFile) && (
-              <div className="bg-gray-50 p-6 rounded-xl border border-gray-200">
-                <p className="text-gray-700 mb-3 leading-relaxed">
-                  <strong className="font-semibold">Image :</strong>
-                </p>
-                <img
-                  src={imageUrl || (imageFile ? URL.createObjectURL(imageFile) : "")}
-                  alt="Prévisualisation"
-                  className="w-full max-w-sm h-auto rounded-lg shadow-sm mb-3 border border-gray-200"
-                />
-                {scheduled && scheduledDate && scheduledTime && (
-                  <p className="text-sm text-gray-600 leading-relaxed">
-                    📅 Programmé pour le{" "}
-                    {new Date(`${scheduledDate}T${scheduledTime}`).toLocaleString("fr-FR")}
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
-
-          <div className="flex justify-center mt-6">
-            <button
-              onClick={handleGenerate}
-              disabled={loading || (!imageUrl && !imageFile)}
-              className="bg-blue-900 text-white px-8 py-3 rounded-xl hover:bg-blue-950 shadow-lg font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed"
-            >
-              {loading ? " Enregistrement..." : "Enregistrer le contenu visuel"}
-            </button>
-          </div>
+      {scheduled && (
+        <div className="flex gap-4">
+          <input type="date" value={scheduledDate} onChange={(e) => setScheduledDate(e.target.value)} className="border p-3 rounded-xl flex-1" min={new Date().toISOString().split("T")[0]} />
+          <input type="time" value={scheduledTime} onChange={(e) => setScheduledTime(e.target.value)} className="border p-3 rounded-xl flex-1" />
         </div>
       )}
 
-      {/* Historique */}
+      <button
+        onClick={handleGenerate}
+        disabled={loading || !isRecaptchaValidated}
+        className={`w-full px-6 py-4 rounded-xl font-bold shadow-lg text-lg ${!isRecaptchaValidated ? "bg-gray-300 text-gray-500" : loading ? "bg-blue-700 text-white" : "bg-blue-900 text-white hover:bg-blue-950"}`}
+      >
+        {loading ? "⏳ Génération..." : !isRecaptchaValidated ? "Valider le reCAPTCHA d'abord" : "🚀 Générer / Enregistrer"}
+      </button>
+
       {postsHistory.length > 0 && (
         <div className="mt-8">
-          <h3 className="font-bold text-2xl mb-4 text-gray-800"> Historique des posts</h3>
+          <h3 className="font-bold text-2xl mb-4">📝 Historique</h3>
           <div className="space-y-4">
             {postsHistory.map((p) => (
-              <div key={p.id} className="bg-white border border-gray-200 p-5 rounded-2xl shadow-md hover:shadow-lg transition-shadow flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <div key={p.id} className="bg-white border p-5 rounded-2xl shadow-md flex justify-between items-start gap-4">
                 <div dangerouslySetInnerHTML={{ __html: p.content }} className="flex-1 prose max-w-none" />
                 {p.imageUrl && <img src={p.imageUrl} alt="" className="max-w-[150px] rounded-xl shadow-sm" />}
-                <div className="flex gap-2 mt-2 md:mt-0">
-                  {p.status !== "Publié" && (
-                    <button
-                      onClick={() => handlePublish(p.id, p.content)}
-                      className="bg-emerald-500 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-emerald-600 transition-colors shadow-sm"
-                    >
-                      ✓ Publier
-                    </button>
-                  )}
-                  <button 
-                    onClick={() => copyContent(p.content)} 
-                    className="bg-blue-50 text-blue-900 px-4 py-2 rounded-xl text-sm font-semibold hover:bg-blue-100 transition-colors shadow-sm"
-                  >
-                    Copier
-                  </button>
+                <div className="flex gap-2">
+                  {p.status !== "Publié" && <button onClick={() => handlePublish(p.id, p.content)} className="bg-emerald-500 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-emerald-600">✓ Publier</button>}
+                  <button onClick={() => copyContent(p.content)} className="bg-blue-50 text-blue-900 px-4 py-2 rounded-xl text-sm font-semibold hover:bg-blue-100">📋 Copier</button>
                 </div>
               </div>
             ))}
