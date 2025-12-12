@@ -543,63 +543,72 @@ export default function GenererPost() {
         {loading ? "Génération..." : !isRecaptchaValidated ? "Valider le reCAPTCHA d'abord" : "🚀 Générer / Enregistrer"}
       </button>
 
-      {postsHistory.length > 0 && (
-        <div className="mt-8">
-          <h3 className="font-bold text-2xl mb-4">Historique</h3>
-          <div className="space-y-4">
-            {postsHistory.map((post) => {
-              const isPastDue = post.scheduledAt && new Date(post.scheduledAt) < new Date() && post.status !== "Publié";
+     {postsHistory.map((post) => {
+       
+          const now = new Date();
+          const scheduledDate = post.scheduledAt ? new Date(post.scheduledAt) : null;
+          const isPublished = post.status?.toLowerCase().includes("pub");
+          const isPastDue = scheduledDate && scheduledDate <= now && !isPublished;
+          const isFuture = scheduledDate && scheduledDate > now;
+          
+          return (
+            <div key={post.id} className="p-4 border border-gray-200 rounded-xl shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gray-50">
+              <div className="flex-1">
+                {post.content && post.content.trim() !== "" && (
+                  <div dangerouslySetInnerHTML={{ __html: post.content }} />
+                )}
+                {post.imageUrl && (
+                  <img 
+                    src={post.imageUrl} 
+                    alt="Post" 
+                    className="w-full max-w-xs h-auto rounded-lg mt-2 border border-gray-200"
+                  />
+                )}
+                {post.scheduledAt && (
+                  <p className="text-xs text-gray-500 mt-2">
+                    📅 {isPastDue ? "À publier maintenant" : isFuture ? "Programmé pour le" : "Publié le"} : {new Date(post.scheduledAt).toLocaleString('fr-FR')}
+                  </p>
+                )}
               
-              return (
-                <div key={post.id} className="bg-white border p-5 rounded-2xl shadow-md flex flex-col md:flex-row justify-between items-start gap-4">
-                  <div className="flex-1">
-                    {post.content && (
-                      <div 
-                        dangerouslySetInnerHTML={{ __html: post.content }} 
-                        className="prose max-w-none mb-2"
-                      />
-                    )}
-                    <div className="text-sm text-gray-500 mt-2">
-                      <span className={`px-2 py-1 rounded ${post.status === "Publié" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}`}>
-                        {post.status || "Brouillon"}
-                      </span>
-                      {post.scheduledAt && (
-                        <span className="ml-2">
-                          📅 {new Date(post.scheduledAt).toLocaleDateString()} {new Date(post.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  
-                  <div className="flex flex-col gap-2">
-                    {post.imageUrl && (
-                      <img 
-                        src={post.imageUrl} 
-                        alt="Post" 
-                        className="max-w-[150px] rounded-xl shadow-sm" 
-                      />
-                    )}
-                    
-                    {post.status !== "Publié" && (
-                      <button
-                        onClick={() => handlePublish(post.id, post.content, post.imageUrl)}
-                        className={`flex items-center justify-center gap-2 px-4 py-2 text-white rounded-lg ${
-                          isPastDue
-                            ? "bg-red-600 hover:bg-red-700"
-                            : "bg-blue-900 hover:bg-blue-950"
-                        }`}
-                      >
-                        <FaLinkedin size={18} />
-                        Publier sur LinkedIn
-                      </button>
-                    )}
-                  </div>
+                <div className="mt-2">
+                  {isPastDue ? (
+                    <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-semibold animate-pulse">
+                      ⏰ À publier maintenant !
+                    </span>
+                  ) : isFuture ? (
+                    <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs font-semibold">
+                       Programmé
+                    </span>
+                  ) : isPublished ? (
+                    <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-semibold">
+                      Publié
+                    </span>
+                  ) : (
+                    <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-semibold">
+                       Brouillon
+                    </span>
+                  )}
                 </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
+              </div>
+            <div className="flex gap-2 mt-2 md:mt-0">
+              
+                {!isPublished && post.content && post.content.trim() !== "" && (
+                    <button
+                      onClick={() => handlePublish(post.id, post.content, post.imageUrl)}
+                      className={`flex items-center gap-2 px-4 py-2 text-white rounded-lg ${
+                        isPastDue
+                          ? "bg-red-600 hover:bg-red-700 animate-pulse"
+                          : "bg-blue-900 hover:bg-blue-950"
+                      }`}
+                    >
+                      <FaLinkedin size={18} />
+                      Publier sur LinkedIn
+                    </button>
+                )}
+              </div>
+            </div>
+          );
+        })}
     </div>
   );
 }
