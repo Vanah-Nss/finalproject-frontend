@@ -9,6 +9,7 @@ import {
   FiUnderline,
   FiList,
 } from "react-icons/fi";
+import { FaLinkedin } from "react-icons/fa";
 import ReCAPTCHA from "react-google-recaptcha";
 
 const CREATE_POST = gql`
@@ -116,7 +117,7 @@ function ImageGenerator({ setImageUrl, getValidToken, addToast }) {
 
 export default function GenererPost() {
   const recaptchaRef = useRef(null);
-  const editorRef = useRef();
+  const editorRef = useRef(null);
   const [recaptchaToken, setRecaptchaToken] = useState("");
   const [isRecaptchaValidated, setIsRecaptchaValidated] = useState(false);
   const [useAIContent, setUseAIContent] = useState(true);
@@ -266,24 +267,31 @@ export default function GenererPost() {
     if (imageFile) {
       const formData = new FormData();
       formData.append("file", imageFile);
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000"}/api/upload-image`, {
-        method: "POST",
-        body: formData,
-      });
-      const data = await res.json();
-      if (!data.url) {
-        addToast("❌ Erreur upload image", "error");
+      try {
+        const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000"}/api/upload-image`, {
+          method: "POST",
+          body: formData,
+        });
+        const data = await res.json();
+        if (!data.url) {
+          addToast("❌ Erreur upload image", "error");
+          setLoading(false);
+          return;
+        }
+        finalImageUrl = data.url;
+      } catch (error) {
+        addToast("❌ Erreur lors de l'upload de l'image", "error");
         setLoading(false);
         return;
       }
-      finalImageUrl = data.url;
     }
 
     try {
       if (useAIContent && useAI) {
         await generatePostMutation({ variables: { theme, tone: tone || null, length, imageUrl: finalImageUrl, scheduledAt, recaptchaToken: token } });
       } else {
-        await createPostMutation({ variables: { content: useAIContent ? (editorRef.current?.innerHTML || "") : "", imageUrl: finalImageUrl, scheduledAt, recaptchaToken: token } });
+        const content = useAIContent ? (editorRef.current?.innerHTML || "") : "";
+        await createPostMutation({ variables: { content, imageUrl: finalImageUrl, scheduledAt, recaptchaToken: token } });
       }
     } catch (err) {
       setLoading(false);
@@ -303,17 +311,36 @@ export default function GenererPost() {
     }
   };
 
-  const handlePublish = async (id, content) => {
-    const textOnly = content.replace(/<[^>]*>?/gm, "").trim();
-    const linkedInUrl = textOnly ? `https://www.linkedin.com/feed/?shareActive=true&text=${encodeURIComponent(textOnly)}` : "https://www.linkedin.com/feed/";
-    window.open(linkedInUrl, "_blank", "width=800,height=600");
+  const handlePublish = async (id, content, postImageUrl) => {
+    // Créer l'URL LinkedIn
+    const textOnly = content ? content.replace(/<[^>]*>?/gm, "").trim() : "";
+    let linkedInUrl = "https://www.linkedin.com/feed/";
+    
+    if (textOnly) {
+      linkedInUrl = `https://www.linkedin.com/feed/?shareActive=true&text=${encodeURIComponent(textOnly)}`;
+    }
+    
+    // Ouvrir la fenêtre LinkedIn
+    const linkedInWindow = window.open(linkedInUrl, "_blank", "width=800,height=600");
+    
+    // Marquer le post comme publié
     await publishPostMutation({ variables: { id: parseInt(id) } });
+    
+    // Attendre un peu avant de vérifier
+    setTimeout(() => {
+      if (linkedInWindow && !linkedInWindow.closed) {
+        // Si l'utilisateur a partagé manuellement, on peut fermer la fenêtre après un délai
+        setTimeout(() => {
+          if (linkedInWindow && !linkedInWindow.closed) {
+            linkedInWindow.close();
+          }
+        }, 5000); // Fermer après 5 secondes
+      }
+    }, 1000);
   };
 
- 
-
   return (
-     <div className="space-y-6 p-6 text-lg font-semibold">
+    <div className="space-y-6 p-6 text-lg font-semibold">
       <div className="fixed top-5 right-5 left-5 md:left-auto md:w-96 flex flex-col items-stretch z-50">
         {toasts.map((t) => (
           <Toast
@@ -333,12 +360,22 @@ export default function GenererPost() {
       </div>
 
       <div className="flex gap-4 justify-center">
-        <button className={`px-6 py-3 rounded-xl font-bold shadow-sm transition-all ${useAIContent ? "bg-blue-900 text-white" : "bg-blue-50 text-blue-900"}`} onClick={() => setUseAIContent(true)}>📝 Contenu Textuel</button>
-        <button className={`px-6 py-3 rounded-xl font-bold shadow-sm transition-all ${!useAIContent ? "bg-blue-900 text-white" : "bg-blue-50 text-blue-900"}`} onClick={() => setUseAIContent(false)}>🖼️ Contenu Visuel</button>
+        <button 
+          className={`px-6 py-3 rounded-xl font-bold shadow-sm transition-all ${useAIContent ? "bg-blue-900 text-white" : "bg-blue-50 text-blue-900"}`} 
+          onClick={() => setUseAIContent(true)}
+        >
+          📝 Contenu Textuel
+        </button>
+        <button 
+          className={`px-6 py-3 rounded-xl font-bold shadow-sm transition-all ${!useAIContent ? "bg-blue-900 text-white" : "bg-blue-50 text-blue-900"}`} 
+          onClick={() => setUseAIContent(false)}
+        >
+          🖼️ Contenu Visuel
+        </button>
       </div>
 
       {useAIContent && (
-  <div className="mt-6">
+        <div className="mt-6">
           <div className="flex gap-6 mt-6">
             <label className="flex items-center gap-2 cursor-pointer">
               <input
@@ -361,16 +398,30 @@ export default function GenererPost() {
           </div>
 
           {useAI ? (
-            <div className="flex flex-col md:flex-row gap-4">
-              <input type="text" placeholder="Thème (ex: IA dans l'éducation)" value={theme} onChange={(e) => setTheme(e.target.value)} className="border p-3 rounded-xl flex-1 shadow-sm focus:ring-2 focus:ring-blue-900" />
-              <select value={tone} onChange={(e) => setTone(e.target.value)} className="border p-3 rounded-xl flex-1 shadow-sm">
+            <div className="flex flex-col md:flex-row gap-4 mt-4">
+              <input 
+                type="text" 
+                placeholder="Thème (ex: IA dans l'éducation)" 
+                value={theme} 
+                onChange={(e) => setTheme(e.target.value)} 
+                className="border p-3 rounded-xl flex-1 shadow-sm focus:ring-2 focus:ring-blue-900" 
+              />
+              <select 
+                value={tone} 
+                onChange={(e) => setTone(e.target.value)} 
+                className="border p-3 rounded-xl flex-1 shadow-sm"
+              >
                 <option value="">-- Ton --</option>
                 <option value="professionnel">Professionnel</option>
                 <option value="amical">Amical</option>
                 <option value="humoristique">Humoristique</option>
                 <option value="motivant">Motivant</option>
               </select>
-              <select value={length} onChange={(e) => setLength(e.target.value)} className="border p-3 rounded-xl flex-1 shadow-sm">
+              <select 
+                value={length} 
+                onChange={(e) => setLength(e.target.value)} 
+                className="border p-3 rounded-xl flex-1 shadow-sm"
+              >
                 <option value="court">Court</option>
                 <option value="moyen">Moyen</option>
                 <option value="long">Long</option>
@@ -378,76 +429,116 @@ export default function GenererPost() {
             </div>
           ) : (
             <>
-              <div className="flex gap-3 mb-4">
-                <button onClick={() => document.execCommand("bold")} className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200"><FiBold /></button>
-                <button onClick={() => document.execCommand("italic")} className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200"><FiItalic /></button>
-                <button onClick={() => document.execCommand("underline")} className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200"><FiUnderline /></button>
-                <button onClick={() => document.execCommand("insertUnorderedList")} className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200"><FiList /></button>
+              <div className="flex gap-3 mb-4 mt-4">
+                <button onClick={() => document.execCommand("bold")} className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200">
+                  <FiBold />
+                </button>
+                <button onClick={() => document.execCommand("italic")} className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200">
+                  <FiItalic />
+                </button>
+                <button onClick={() => document.execCommand("underline")} className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200">
+                  <FiUnderline />
+                </button>
+                <button onClick={() => document.execCommand("insertUnorderedList")} className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200">
+                  <FiList />
+                </button>
               </div>
-              <div ref={editorRef} contentEditable suppressContentEditableWarning className="border p-4 rounded-xl min-h-[150px] shadow-sm focus:ring-2 focus:ring-blue-900" />
+              <div 
+                ref={editorRef} 
+                contentEditable 
+                suppressContentEditableWarning 
+                className="border p-4 rounded-xl min-h-[150px] shadow-sm focus:ring-2 focus:ring-blue-900" 
+              />
             </>
           )}
 
-         <div className="flex flex-col md:flex-row gap-3 items-center mt-4">
+          <div className="flex flex-col md:flex-row gap-3 items-center mt-4">
             <label className="bg-blue-900 hover:bg-blue-950 text-white px-5 py-3 rounded-xl flex items-center gap-2 cursor-pointer shadow-sm">
               <FiUpload size={18} /> Upload une image
               <input
                 type="file"
                 accept="image/*"
                 className="hidden"
-                onChange={(e) => {
-                  if (e.target.files[0]) {
-                    setImageFile(e.target.files[0]);
-                    setImageUrl("");
-                  }
-                }}
+                onChange={(e) => handleImageUpload(e)}
               />
             </label>
           </div>
-           </div>
-   
-      
+        </div>
+      )}
 
       {!useAIContent && (
-        <div className="bg-white p-6 rounded-2xl shadow-md border">
-          <h3 className="font-semibold text-lg mb-4"> Générateur d'image IA</h3>
-          <ImageGenerator setImageUrl={setImageUrl} getValidToken={getValidToken} addToast={addToast} />
+        <div className="bg-white p-6 rounded-2xl shadow-md border mt-6">
+          <h3 className="font-semibold text-lg mb-4">Générateur d'image IA</h3>
+          <ImageGenerator 
+            setImageUrl={setImageUrl} 
+            getValidToken={getValidToken} 
+            addToast={addToast} 
+          />
           {(imageUrl || imageFile) && (
             <div className="mt-6 bg-gray-50 p-6 rounded-xl border">
               <p className="mb-3"><strong>👁️ Prévisualisation :</strong></p>
-              <img src={imageUrl || URL.createObjectURL(imageFile)} alt="Preview" className="w-full max-w-sm rounded-lg shadow-sm border" />
+              <img 
+                src={imageUrl || URL.createObjectURL(imageFile)} 
+                alt="Preview" 
+                className="w-full max-w-sm rounded-lg shadow-sm border" 
+              />
             </div>
           )}
         </div>
       )}
 
-     
+      <div className="mt-6">
         <ReCAPTCHA
           ref={recaptchaRef}
           sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY || "6LcKJSEsAAAAAEJEapu9xwjSXocPgKYQ1RTn2zgS"}
           onChange={onRecaptchaChange}
           onExpired={onRecaptchaExpired}
         />
-        <p className="text-xs text-gray-500 mt-2">{isRecaptchaValidated ? "✅ Validé" : "ℹ️ Veuillez cocher la case"}</p>
-     
+        <p className="text-xs text-gray-500 mt-2">
+          {isRecaptchaValidated ? "✅ Validé" : "ℹ️ Veuillez cocher la case"}
+        </p>
+      </div>
+
       <div className="flex items-center gap-4">
         <label className="flex items-center gap-2 cursor-pointer">
-          <input type="checkbox" checked={scheduled} onChange={() => setScheduled(!scheduled)} className="w-5 h-5" />
+          <input 
+            type="checkbox" 
+            checked={scheduled} 
+            onChange={() => setScheduled(!scheduled)} 
+            className="w-5 h-5" 
+          />
           <span className="font-medium">📅 Programmer</span>
         </label>
       </div>
 
       {scheduled && (
         <div className="flex gap-4">
-          <input type="date" value={scheduledDate} onChange={(e) => setScheduledDate(e.target.value)} className="border p-3 rounded-xl flex-1" min={new Date().toISOString().split("T")[0]} />
-          <input type="time" value={scheduledTime} onChange={(e) => setScheduledTime(e.target.value)} className="border p-3 rounded-xl flex-1" />
+          <input 
+            type="date" 
+            value={scheduledDate} 
+            onChange={(e) => setScheduledDate(e.target.value)} 
+            className="border p-3 rounded-xl flex-1" 
+            min={new Date().toISOString().split("T")[0]} 
+          />
+          <input 
+            type="time" 
+            value={scheduledTime} 
+            onChange={(e) => setScheduledTime(e.target.value)} 
+            className="border p-3 rounded-xl flex-1" 
+          />
         </div>
       )}
 
       <button
         onClick={handleGenerate}
         disabled={loading || !isRecaptchaValidated}
-        className={`w-full px-6 py-4 rounded-xl font-bold shadow-lg text-lg ${!isRecaptchaValidated ? "bg-gray-300 text-gray-500" : loading ? "bg-blue-700 text-white" : "bg-blue-900 text-white hover:bg-blue-950"}`}
+        className={`w-full px-6 py-4 rounded-xl font-bold shadow-lg text-lg mt-4 ${
+          !isRecaptchaValidated 
+            ? "bg-gray-300 text-gray-500 cursor-not-allowed" 
+            : loading 
+            ? "bg-blue-700 text-white" 
+            : "bg-blue-900 text-white hover:bg-blue-950"
+        }`}
       >
         {loading ? "Génération..." : !isRecaptchaValidated ? "Valider le reCAPTCHA d'abord" : "🚀 Générer / Enregistrer"}
       </button>
@@ -456,26 +547,56 @@ export default function GenererPost() {
         <div className="mt-8">
           <h3 className="font-bold text-2xl mb-4">Historique</h3>
           <div className="space-y-4">
-            {postsHistory.map((p) => (
-              <div key={p.id} className="bg-white border p-5 rounded-2xl shadow-md flex justify-between items-start gap-4">
-                <div dangerouslySetInnerHTML={{ __html: p.content }} className="flex-1 prose max-w-none" />
-                {p.imageUrl && <img src={p.imageUrl} alt="" className="max-w-[150px] rounded-xl shadow-sm" />}
-                <div className="flex gap-2">
-                  {p.status !== "Publié" &&    <button
-                      onClick={() => handlePublish(post.id, post.content, post.imageUrl)}
-                      className={`flex items-center gap-2 px-4 py-2 text-white rounded-lg ${
-                        isPastDue
-                          ? "bg-red-600 hover:bg-red-700 animate-pulse"
-                          : "bg-blue-900 hover:bg-blue-950"
-                      }`}
-                    >
-                      <FaLinkedin size={18} />
-                      Publier sur LinkedIn
-                    </button>}
-
+            {postsHistory.map((post) => {
+              const isPastDue = post.scheduledAt && new Date(post.scheduledAt) < new Date() && post.status !== "Publié";
+              
+              return (
+                <div key={post.id} className="bg-white border p-5 rounded-2xl shadow-md flex flex-col md:flex-row justify-between items-start gap-4">
+                  <div className="flex-1">
+                    {post.content && (
+                      <div 
+                        dangerouslySetInnerHTML={{ __html: post.content }} 
+                        className="prose max-w-none mb-2"
+                      />
+                    )}
+                    <div className="text-sm text-gray-500 mt-2">
+                      <span className={`px-2 py-1 rounded ${post.status === "Publié" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}`}>
+                        {post.status || "Brouillon"}
+                      </span>
+                      {post.scheduledAt && (
+                        <span className="ml-2">
+                          📅 {new Date(post.scheduledAt).toLocaleDateString()} {new Date(post.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="flex flex-col gap-2">
+                    {post.imageUrl && (
+                      <img 
+                        src={post.imageUrl} 
+                        alt="Post" 
+                        className="max-w-[150px] rounded-xl shadow-sm" 
+                      />
+                    )}
+                    
+                    {post.status !== "Publié" && (
+                      <button
+                        onClick={() => handlePublish(post.id, post.content, post.imageUrl)}
+                        className={`flex items-center justify-center gap-2 px-4 py-2 text-white rounded-lg ${
+                          isPastDue
+                            ? "bg-red-600 hover:bg-red-700"
+                            : "bg-blue-900 hover:bg-blue-950"
+                        }`}
+                      >
+                        <FaLinkedin size={18} />
+                        Publier sur LinkedIn
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
