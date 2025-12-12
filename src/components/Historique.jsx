@@ -491,8 +491,8 @@ const downloadImage = async (url, filename) => {
   return (
     <div className="space-y-6 p-4">
 
-        <h1 className="text-3xl font-extrabold tracking-wide">Historique des posts</h1>
-    
+        <h2 className="text-5xl font-black tracking-tight text-blue-900"> Historique des posts</h2>
+
 
       <div className="fixed top-5 right-5 z-50 flex flex-col items-end space-y-2">
         {toasts.map((t) => (

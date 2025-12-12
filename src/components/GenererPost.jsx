@@ -583,37 +583,60 @@ export default function GenererPost() {
       </div>
 
       <div className="text-center">
-        <h2 className="text-4xl font-extrabold tracking-wide text-black">Générateur de post</h2>
-        <p className="text-sm text-gray-600 mt-2">Générer vos contenus textuels et visuels à l'aide de l'IA ou sans IA.</p>
+  <h2 className="text-5xl font-black tracking-tight text-blue-900">Générateur de post</h2>
+        <p className="text-xl text-gray-700 mt-2">
+          Générez vos contenus textuels et visuels à l'aide de l'IA ou sans IA.
+        </p>
       </div>
 
-      <div className="flex gap-4 justify-center">
+  <div className="flex gap-4 mt-6 justify-center">
         <button
-          className={`px-6 py-3 rounded-xl font-semibold shadow-sm transition-all ${useAIContent ? "bg-blue-900 text-white" : "bg-blue-50 text-blue-900 hover:bg-blue-100"}`}
+          className={`px-6 py-3 rounded-xl font-bold text-lg shadow-sm transition-all ${
+            useAIContent
+              ? "bg-blue-900 text-white"
+              : "bg-blue-50 text-blue-900 hover:bg-blue-100"
+          }`}
           onClick={() => setUseAIContent(true)}
         >
           Contenu Textuel
         </button>
         <button
-          className={`px-6 py-3 rounded-xl font-semibold shadow-sm transition-all ${!useAIContent ? "bg-blue-900 text-white" : "bg-blue-50 text-blue-900 hover:bg-blue-100"}`}
+          className={`px-6 py-3 rounded-xl font-bold text-lg shadow-sm transition-all ${
+            !useAIContent
+              ? "bg-blue-900 text-white"
+              : "bg-blue-50 text-blue-900 hover:bg-blue-100"
+          }`}
           onClick={() => setUseAIContent(false)}
         >
-           Contenu Visuel
+          Contenu Visuel
         </button>
       </div>
 
+
+ 
       {useAIContent && (
-        <div className="mt-6 bg-white p-6 rounded-2xl shadow-md border border-gray-100">
-          <div className="flex gap-6">
+        <div className="mt-6">
+          <div className="flex gap-6 mt-6">
             <label className="flex items-center gap-2 cursor-pointer">
-              <input type="radio" checked={useAI} onChange={() => setUseAI(true)} className="w-4 h-4 text-blue-900" />
+              <input
+                type="radio"
+                checked={useAI}
+                onChange={() => setUseAI(true)}
+                className="w-5 h-5"
+              />
               <span className="font-medium">Avec IA</span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer">
-              <input type="radio" checked={!useAI} onChange={() => setUseAI(false)} className="w-4 h-4 text-blue-900" />
-              <span className="font-medium"> Texte manuel</span>
+              <input
+                type="radio"
+                checked={!useAI}
+                onChange={() => setUseAI(false)}
+                className="w-5 h-5"
+              />
+              <span className="font-medium">Texte manuel</span>
             </label>
           </div>
+
 
           {useAI ? (
             <div className="flex flex-col md:flex-row gap-4 mt-4">
@@ -734,61 +757,41 @@ export default function GenererPost() {
         </div>
       </div>
 
-      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-2xl shadow-md border border-blue-100">
-        <div className="flex items-center gap-3 mb-4">
-          <FiCalendar className="text-blue-900 text-2xl" />
-          <h3 className="font-semibold text-lg text-blue-900">Programmation de publication</h3>
-        </div>
-        
-        <div className="flex items-start gap-3">
-          <label className="flex items-center gap-2 cursor-pointer bg-white px-4 py-2 rounded-xl shadow-sm hover:shadow-md transition-all">
-            <input 
-              type="checkbox" 
-              checked={scheduled} 
-              onChange={(e) => setScheduled(e.target.checked)} 
-              className="w-4 h-4 text-blue-900"
-            />
-            <span className="font-medium text-gray-700">📅 Programmer ce post</span>
-          </label>
-          
+       <div className="flex items-center gap-4 mt-4">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={scheduled}
+                onChange={() => setScheduled(!scheduled)}
+                className="w-5 h-5"
+              />
+              <span className="font-medium">📅 Programmer la publication</span>
+            </label>
+          </div>
+
           {scheduled && (
-            <div className="flex flex-col sm:flex-row gap-3 flex-1">
-              <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl shadow-sm flex-1">
-                <FiCalendar className="text-blue-900" />
-                <input 
-                  type="date" 
-                  value={scheduledDate} 
-                  onChange={(e) => setScheduledDate(e.target.value)} 
-                  className="border-0 focus:ring-0 w-full text-gray-700 font-medium"
+            <div className="flex flex-col md:flex-row gap-4 mt-3">
+              <div className="flex flex-col flex-1">
+                <label className="text-sm text-gray-600 mb-1">Date de publication</label>
+                <input
+                  type="date"
+                  value={scheduledDate}
+                  onChange={(e) => setScheduledDate(e.target.value)}
+                  className="border border-gray-300 p-3 rounded-xl shadow-sm"
+                  min={new Date().toISOString().split("T")[0]}
                 />
               </div>
-              
-              <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl shadow-sm flex-1">
-                <FiClock className="text-blue-900" />
-                <input 
-                  type="time" 
-                  value={scheduledTime} 
-                  onChange={(e) => setScheduledTime(e.target.value)} 
-                  className="border-0 focus:ring-0 w-full text-gray-700 font-medium"
+              <div className="flex flex-col flex-1">
+                <label className="text-sm text-gray-600 mb-1">Heure de publication</label>
+                <input
+                  type="time"
+                  value={scheduledTime}
+                  onChange={(e) => setScheduledTime(e.target.value)}
+                  className="border border-gray-300 p-3 rounded-xl shadow-sm"
                 />
               </div>
             </div>
           )}
-        </div>
-        
-        {scheduled && scheduledDate && scheduledTime && (
-          <div className="mt-3 p-3 bg-white rounded-xl text-sm text-gray-600">
-            📅 Publication prévue le <strong>{new Date(`${scheduledDate}T${scheduledTime}`).toLocaleDateString('fr-FR', { 
-              weekday: 'long', 
-              year: 'numeric', 
-              month: 'long', 
-              day: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit'
-            })}</strong>
-          </div>
-        )}
-      </div>
 
       {/* ✅ BOUTON AMÉLIORÉ AVEC ANIMATION */}
       <button
@@ -815,16 +818,40 @@ export default function GenererPost() {
         )}
       </button>
 
-      {previewContent && (
-        <div className="mt-6 p-6 bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200 rounded-2xl shadow-md">
-          <h3 className="font-bold text-xl mb-3 text-gray-800">👁️ Prévisualisation</h3>
-          <div dangerouslySetInnerHTML={{ __html: previewContent }} className="prose max-w-none" />
-          <button 
-            onClick={() => copyContent(previewContent)} 
-            className="mt-4 text-sm text-blue-900 font-semibold bg-white px-4 py-2 rounded-lg hover:bg-blue-50 transition-colors shadow-sm"
-          >
-            📋 Copier le contenu
-          </button>
+       <div className="bg-white p-8 rounded-2xl shadow-sm border border-blue-200">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2 tracking-wide">
+              Prévisualisation
+            </h3>
+
+            {(imageUrl || imageFile) && (
+              <div className="bg-gray-50 p-6 rounded-xl border border-gray-200">
+                <p className="text-gray-700 mb-3 leading-relaxed">
+                  <strong className="font-semibold">Image :</strong>
+                </p>
+                <img
+                  src={imageUrl || (imageFile ? URL.createObjectURL(imageFile) : "")}
+                  alt="Prévisualisation"
+                  className="w-full max-w-sm h-auto rounded-lg shadow-sm mb-3 border border-gray-200"
+                />
+                {scheduled && scheduledDate && scheduledTime && (
+                  <p className="text-sm text-gray-600 leading-relaxed">
+                    📅 Programmé pour le{" "}
+                    {new Date(`${scheduledDate}T${scheduledTime}`).toLocaleString("fr-FR")}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="flex justify-center mt-6">
+            <button
+              onClick={handleGenerate}
+              disabled={loading || (!imageUrl && !imageFile)}
+              className="bg-blue-900 text-white px-8 py-3 rounded-xl hover:bg-blue-950 shadow-lg font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed"
+            >
+              {loading ? " Enregistrement..." : "Enregistrer le contenu visuel"}
+            </button>
+          </div>
         </div>
       )}
 

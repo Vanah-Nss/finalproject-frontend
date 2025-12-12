@@ -36,11 +36,15 @@ export default function Parametres({ theme, toggleTheme }) {
   };
 
   return ( 
-     <div className="space-y-6 p-4">
-      <div className="flex flex-col h-screen bg-blue-50 dark:bg-blue-50 overflow-hidden">
- <div className="m-6 bg-blue-900 text-white p-6 rounded-2xl shadow-lg border border-blue-700 flex items-center justify-between">
-  <h1 className="text-3xl font-extrabold">⚙️ Paramètres</h1>
-</div>
+    <div className="space-y-6 p-4">
+    
+
+
+        <h2 className="text-5xl font-black tracking-tight text-blue-900">Paramètres</h2>
+
+
+      <div className="flex-1 p-6 space-y-6 overflow-hidden">
+     
 
 
 

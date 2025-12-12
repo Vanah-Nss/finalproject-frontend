@@ -118,9 +118,9 @@ export default function TableauDeBord() {
      <div className="space-y-6 p-4">
     
 
-<h2 className="text-4xl font-extrabold tracking-wide bg-gradient-to-r from-black to-gray-700 bg-clip-text text-transparent">
-  Tableau de bord
-</h2>
+  <h2 className="text-5xl font-black tracking-tight text-blue-900">Tableau de Bord</h2>
+
+
 
 
       <div className="flex-1 p-6 space-y-6 overflow-hidden">
