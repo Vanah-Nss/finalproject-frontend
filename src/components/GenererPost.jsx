@@ -466,127 +466,84 @@ export default function GenererPost() {
         </div>
       )}
 
-       {!useAIContent && (
-        <div className="mt-6 space-y-6">
-          <div className="bg-gradient-to-br from-slate-50 to-gray-50 p-8 rounded-2xl shadow-sm border border-blue-200">
-            <label className="block text-lg font-semibold text-gray-800 mb-4 tracking-wide">
-              Générateur d'image IA
-            </label>
-            <ImageGenerator setImageUrl={setImageUrl} />
-          </div>
-
-          <div className="bg-gradient-to-br from-slate-50 to-gray-50 p-8 rounded-2xl shadow-sm border border-blue-200">
-            <label className="bg-blue-900 hover:bg-blue-950 text-white px-5 py-3 rounded-xl flex items-center gap-2 cursor-pointer shadow-sm w-fit">
-              <FiUpload size={18} /> Upload une image
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => {
-                  if (e.target.files[0]) {
-                    setImageFile(e.target.files[0]);
-                    setImageUrl("");
-                  }
-                }}
+      {!useAIContent && (
+        <div className="bg-white p-6 rounded-2xl shadow-md border mt-6">
+          <h3 className="font-semibold text-lg mb-4">Générateur d'image IA</h3>
+          <ImageGenerator 
+            setImageUrl={setImageUrl} 
+            getValidToken={getValidToken} 
+            addToast={addToast} 
+          />
+          {(imageUrl || imageFile) && (
+            <div className="mt-6 bg-gray-50 p-6 rounded-xl border">
+              <p className="mb-3"><strong>👁️ Prévisualisation :</strong></p>
+              <img 
+                src={imageUrl || URL.createObjectURL(imageFile)} 
+                alt="Preview" 
+                className="w-full max-w-sm rounded-lg shadow-sm border" 
               />
-            </label>
-
-            {imageFile && (
-              <div className="mt-4">
-                <p className="text-gray-700 mb-2">Image sélectionnée: {imageFile.name}</p>
-                <img
-                  src={URL.createObjectURL(imageFile)}
-                  alt="Prévisualisation"
-                  className="w-full max-w-xs h-auto rounded-lg"
-                />
-              </div>
-            )}
-          </div>
-
-          <div className="bg-gradient-to-br from-slate-50 to-gray-50 p-8 rounded-2xl shadow-sm border border-blue-200">
-            <div className="flex items-center gap-3 mb-4">
-              <input
-                type="checkbox"
-                id="schedule-visual"
-                checked={scheduled}
-                onChange={() => setScheduled(!scheduled)}
-                className="w-5 h-5 text-blue-900 rounded focus:ring-2 focus:ring-blue-400"
-              />
-              <label
-                htmlFor="schedule-visual"
-                className="text-lg font-semibold text-gray-800 cursor-pointer tracking-wide"
-              >
-                📅 Programmer la publication
-              </label>
             </div>
-
-            {scheduled && (
-              <div className="flex flex-col md:flex-row gap-4 mt-6">
-                <div className="flex flex-col flex-1">
-                  <label className="text-sm font-semibold text-gray-700 mb-2 tracking-wide">
-                    📆 Date
-                  </label>
-                  <input
-                    type="date"
-                    value={scheduledDate}
-                    onChange={(e) => setScheduledDate(e.target.value)}
-                    className="border border-gray-300 p-3 rounded-xl shadow-sm focus:ring-2 focus:ring-blue-400 focus:border-transparent bg-white"
-                    min={new Date().toISOString().split("T")[0]}
-                  />
-                </div>
-                <div className="flex flex-col flex-1">
-                  <label className="text-sm font-semibold text-gray-700 mb-2 tracking-wide">
-                    ⏰ Heure
-                  </label>
-                  <input
-                    type="time"
-                    value={scheduledTime}
-                    onChange={(e) => setScheduledTime(e.target.value)}
-                    className="border border-gray-300 p-3 rounded-xl shadow-sm focus:ring-2 focus:ring-gray-400 focus:border-transparent bg-white"
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="bg-white p-8 rounded-2xl shadow-sm border border-blue-200">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2 tracking-wide">
-              Prévisualisation
-            </h3>
-
-            {(imageUrl || imageFile) && (
-              <div className="bg-gray-50 p-6 rounded-xl border border-gray-200">
-                <p className="text-gray-700 mb-3 leading-relaxed">
-                  <strong className="font-semibold">Image :</strong>
-                </p>
-                <img
-                  src={imageUrl || (imageFile ? URL.createObjectURL(imageFile) : "")}
-                  alt="Prévisualisation"
-                  className="w-full max-w-sm h-auto rounded-lg shadow-sm mb-3 border border-gray-200"
-                />
-                {scheduled && scheduledDate && scheduledTime && (
-                  <p className="text-sm text-gray-600 leading-relaxed">
-                    📅 Programmé pour le{" "}
-                    {new Date(`${scheduledDate}T${scheduledTime}`).toLocaleString("fr-FR")}
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
-
-          <div className="flex justify-center mt-6">
-            <button
-              onClick={handleGenerate}
-              disabled={loading || (!imageUrl && !imageFile)}
-              className="bg-blue-900 text-white px-8 py-3 rounded-xl hover:bg-blue-950 shadow-lg font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed"
-            >
-              {loading ? " Enregistrement..." : "Enregistrer le contenu visuel"}
-            </button>
-          </div>
+          )}
         </div>
       )}
 
-     <div className="mt-8 space-y-4">
+      <div className="mt-6">
+        <ReCAPTCHA
+          ref={recaptchaRef}
+          sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY || "6LcKJSEsAAAAAEJEapu9xwjSXocPgKYQ1RTn2zgS"}
+          onChange={onRecaptchaChange}
+          onExpired={onRecaptchaExpired}
+        />
+        <p className="text-xs text-gray-500 mt-2">
+          {isRecaptchaValidated ? "✅ Validé" : "ℹ️ Veuillez cocher la case"}
+        </p>
+      </div>
+
+      <div className="flex items-center gap-4">
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input 
+            type="checkbox" 
+            checked={scheduled} 
+            onChange={() => setScheduled(!scheduled)} 
+            className="w-5 h-5" 
+          />
+          <span className="font-medium">📅 Programmer</span>
+        </label>
+      </div>
+
+      {scheduled && (
+        <div className="flex gap-4">
+          <input 
+            type="date" 
+            value={scheduledDate} 
+            onChange={(e) => setScheduledDate(e.target.value)} 
+            className="border p-3 rounded-xl flex-1" 
+            min={new Date().toISOString().split("T")[0]} 
+          />
+          <input 
+            type="time" 
+            value={scheduledTime} 
+            onChange={(e) => setScheduledTime(e.target.value)} 
+            className="border p-3 rounded-xl flex-1" 
+          />
+        </div>
+      )}
+
+      <button
+        onClick={handleGenerate}
+        disabled={loading || !isRecaptchaValidated}
+        className={`w-full px-6 py-4 rounded-xl font-bold shadow-lg text-lg mt-4 ${
+          !isRecaptchaValidated 
+            ? "bg-gray-300 text-gray-500 cursor-not-allowed" 
+            : loading 
+            ? "bg-blue-700 text-white" 
+            : "bg-blue-900 text-white hover:bg-blue-950"
+        }`}
+      >
+        {loading ? "Génération..." : !isRecaptchaValidated ? "Valider le reCAPTCHA d'abord" : "🚀 Générer / Enregistrer"}
+      </button>
+
+       <div className="mt-8 space-y-4">
         <h3 className="font-semibold text-lg"> Historique des posts :</h3>
         {postsHistory.map((post) => {
        
