@@ -543,7 +543,9 @@ export default function GenererPost() {
         {loading ? "Génération..." : !isRecaptchaValidated ? "Valider le reCAPTCHA d'abord" : "🚀 Générer / Enregistrer"}
       </button>
 
-     {postsHistory.map((post) => {
+       <div className="mt-8 space-y-4">
+        <h3 className="font-semibold text-lg"> Historique des posts :</h3>
+        {postsHistory.map((post) => {
        
           const now = new Date();
           const scheduledDate = post.scheduledAt ? new Date(post.scheduledAt) : null;
@@ -609,6 +611,8 @@ export default function GenererPost() {
             </div>
           );
         })}
+      </div>
     </div>
+   
   );
 }
