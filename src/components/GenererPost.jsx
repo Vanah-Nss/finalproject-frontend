@@ -310,20 +310,26 @@ export default function GenererPost() {
     await publishPostMutation({ variables: { id: parseInt(id) } });
   };
 
-  const copyContent = (content) => {
-    navigator.clipboard.writeText(content.replace(/<[^>]*>?/gm, "").trim());
-    addToast("📋 Contenu copié !", "success");
-  };
+ 
 
   return (
-    <div className="space-y-6 p-4 max-w-5xl mx-auto">
-      <div className="fixed top-5 right-5 left-5 md:left-auto md:w-96 flex flex-col z-50">
-        {toasts.map((t) => <Toast key={t.id} message={t.message} type={t.type} onClose={() => setToasts((prev) => prev.filter((x) => x.id !== t.id))} />)}
+     <div className="space-y-6 p-6 text-lg font-semibold">
+      <div className="fixed top-5 right-5 left-5 md:left-auto md:w-96 flex flex-col items-stretch z-50">
+        {toasts.map((t) => (
+          <Toast
+            key={t.id}
+            message={t.message}
+            type={t.type}
+            onClose={() => setToasts((prev) => prev.filter((x) => x.id !== t.id))}
+          />
+        ))}
       </div>
 
-      <div className="text-center">
-        <h2 className="text-5xl font-black text-blue-900">Générateur de post</h2>
-        <p className="text-xl text-gray-700 mt-2">Générez vos contenus avec ou sans IA</p>
+      <div>
+        <h2 className="text-5xl font-black tracking-tight text-blue-900">Générateur de post</h2>
+        <p className="text-xl text-gray-700 mt-2">
+          Générez vos contenus textuels et visuels à l'aide de l'IA ou sans IA.
+        </p>
       </div>
 
       <div className="flex gap-4 justify-center">
@@ -332,15 +338,25 @@ export default function GenererPost() {
       </div>
 
       {useAIContent && (
-        <div className="bg-white p-6 rounded-2xl shadow-md border">
-          <div className="flex gap-6 mb-6">
+  <div className="mt-6">
+          <div className="flex gap-6 mt-6">
             <label className="flex items-center gap-2 cursor-pointer">
-              <input type="radio" checked={useAI} onChange={() => setUseAI(true)} className="w-5 h-5" />
-              <span className="font-medium">🤖 Avec IA</span>
+              <input
+                type="radio"
+                checked={useAI}
+                onChange={() => setUseAI(true)}
+                className="w-5 h-5"
+              />
+              <span className="font-medium">Avec IA</span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer">
-              <input type="radio" checked={!useAI} onChange={() => setUseAI(false)} className="w-5 h-5" />
-              <span className="font-medium">✍️ Texte manuel</span>
+              <input
+                type="radio"
+                checked={!useAI}
+                onChange={() => setUseAI(false)}
+                className="w-5 h-5"
+              />
+              <span className="font-medium">Texte manuel</span>
             </label>
           </div>
 
@@ -372,18 +388,29 @@ export default function GenererPost() {
             </>
           )}
 
-          <label className="flex items-center gap-2 cursor-pointer bg-gray-50 px-4 py-3 rounded-xl hover:bg-gray-100 mt-4 border">
-            <FiUpload className="text-blue-900" />
-            <span className="font-medium">📎 Ajouter une image (optionnel)</span>
-            <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
-          </label>
-          {imageFile && <div className="mt-2 text-sm text-green-600 flex items-center gap-2"><FiCheckCircle /><span>{imageFile.name}</span></div>}
-        </div>
-      )}
+         <div className="flex flex-col md:flex-row gap-3 items-center mt-4">
+            <label className="bg-blue-900 hover:bg-blue-950 text-white px-5 py-3 rounded-xl flex items-center gap-2 cursor-pointer shadow-sm">
+              <FiUpload size={18} /> Upload une image
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  if (e.target.files[0]) {
+                    setImageFile(e.target.files[0]);
+                    setImageUrl("");
+                  }
+                }}
+              />
+            </label>
+          </div>
+           </div>
+   
+      
 
       {!useAIContent && (
         <div className="bg-white p-6 rounded-2xl shadow-md border">
-          <h3 className="font-semibold text-lg mb-4">🎨 Générateur d'image IA</h3>
+          <h3 className="font-semibold text-lg mb-4"> Générateur d'image IA</h3>
           <ImageGenerator setImageUrl={setImageUrl} getValidToken={getValidToken} addToast={addToast} />
           {(imageUrl || imageFile) && (
             <div className="mt-6 bg-gray-50 p-6 rounded-xl border">
@@ -394,10 +421,7 @@ export default function GenererPost() {
         </div>
       )}
 
-      <div className="bg-white p-6 rounded-2xl shadow-md border">
-        <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
-          🔒 Vérification {isRecaptchaValidated && <span className="text-emerald-500 text-sm">✓</span>}
-        </h3>
+     
         <ReCAPTCHA
           ref={recaptchaRef}
           sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY || "6LcKJSEsAAAAAEJEapu9xwjSXocPgKYQ1RTn2zgS"}
@@ -405,8 +429,7 @@ export default function GenererPost() {
           onExpired={onRecaptchaExpired}
         />
         <p className="text-xs text-gray-500 mt-2">{isRecaptchaValidated ? "✅ Validé" : "ℹ️ Veuillez cocher la case"}</p>
-      </div>
-
+     
       <div className="flex items-center gap-4">
         <label className="flex items-center gap-2 cursor-pointer">
           <input type="checkbox" checked={scheduled} onChange={() => setScheduled(!scheduled)} className="w-5 h-5" />
@@ -426,20 +449,30 @@ export default function GenererPost() {
         disabled={loading || !isRecaptchaValidated}
         className={`w-full px-6 py-4 rounded-xl font-bold shadow-lg text-lg ${!isRecaptchaValidated ? "bg-gray-300 text-gray-500" : loading ? "bg-blue-700 text-white" : "bg-blue-900 text-white hover:bg-blue-950"}`}
       >
-        {loading ? "⏳ Génération..." : !isRecaptchaValidated ? "Valider le reCAPTCHA d'abord" : "🚀 Générer / Enregistrer"}
+        {loading ? "Génération..." : !isRecaptchaValidated ? "Valider le reCAPTCHA d'abord" : "🚀 Générer / Enregistrer"}
       </button>
 
       {postsHistory.length > 0 && (
         <div className="mt-8">
-          <h3 className="font-bold text-2xl mb-4">📝 Historique</h3>
+          <h3 className="font-bold text-2xl mb-4">Historique</h3>
           <div className="space-y-4">
             {postsHistory.map((p) => (
               <div key={p.id} className="bg-white border p-5 rounded-2xl shadow-md flex justify-between items-start gap-4">
                 <div dangerouslySetInnerHTML={{ __html: p.content }} className="flex-1 prose max-w-none" />
                 {p.imageUrl && <img src={p.imageUrl} alt="" className="max-w-[150px] rounded-xl shadow-sm" />}
                 <div className="flex gap-2">
-                  {p.status !== "Publié" && <button onClick={() => handlePublish(p.id, p.content)} className="bg-emerald-500 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-emerald-600">✓ Publier</button>}
-                  <button onClick={() => copyContent(p.content)} className="bg-blue-50 text-blue-900 px-4 py-2 rounded-xl text-sm font-semibold hover:bg-blue-100">📋 Copier</button>
+                  {p.status !== "Publié" &&    <button
+                      onClick={() => handlePublish(post.id, post.content, post.imageUrl)}
+                      className={`flex items-center gap-2 px-4 py-2 text-white rounded-lg ${
+                        isPastDue
+                          ? "bg-red-600 hover:bg-red-700 animate-pulse"
+                          : "bg-blue-900 hover:bg-blue-950"
+                      }`}
+                    >
+                      <FaLinkedin size={18} />
+                      Publier sur LinkedIn
+                    </button>}
+
                 </div>
               </div>
             ))}
