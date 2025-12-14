@@ -70,7 +70,7 @@ function ImageGenerator({ setImageUrl, getValidToken, addToast }) {
       setLoading(false);
       if (data.generateImage.success) {
         setImageUrl(data.generateImage.imageUrl);
-        addToast(" Image générée avec succès !", "success");
+        addToast("✨ Image générée avec succès !", "success");
       } else {
         addToast(`❌ ${data.generateImage.message}`, "error");
       }
@@ -109,7 +109,7 @@ function ImageGenerator({ setImageUrl, getValidToken, addToast }) {
         disabled={loading}
         className="bg-blue-900 text-white px-5 py-3 rounded-xl hover:bg-blue-950 shadow-md font-semibold disabled:opacity-50"
       >
-        {loading ? " Génération en cours..." : " Générer l'image"}
+        {loading ? "🔄 Génération en cours..." : "✨ Générer l'image"}
       </button>
     </div>
   );
@@ -133,6 +133,9 @@ export default function GenererPost() {
   const [scheduled, setScheduled] = useState(false);
   const [scheduledDate, setScheduledDate] = useState("");
   const [scheduledTime, setScheduledTime] = useState("");
+  
+  // État pour capturer le contenu de l'éditeur
+  const [editorContent, setEditorContent] = useState("");
 
   const addToast = (message, type) => {
     const id = Date.now();
@@ -143,7 +146,7 @@ export default function GenererPost() {
   const onRecaptchaChange = (token) => {
     setRecaptchaToken(token || "");
     setIsRecaptchaValidated(!!token);
-    if (token) addToast(" reCAPTCHA validé !", "success");
+    if (token) addToast("✅ reCAPTCHA validé !", "success");
   };
 
   const onRecaptchaExpired = () => {
@@ -162,6 +165,7 @@ export default function GenererPost() {
 
   const resetForm = () => {
     if (editorRef.current) editorRef.current.innerHTML = "";
+    setEditorContent("");
     setImageFile(null);
     setImageUrl("");
     setScheduled(false);
@@ -181,7 +185,7 @@ export default function GenererPost() {
       setLoading(false);
       if (data.generatePost.success && data.generatePost.post) {
         setPostsHistory((prev) => [data.generatePost.post, ...prev]);
-        addToast(data.generatePost.post.scheduledAt ? "📅 Post IA programmé !" : " Post IA généré !", "success");
+        addToast(data.generatePost.post.scheduledAt ? "📅 Post IA programmé !" : "✅ Post IA généré !", "success");
         resetForm();
       } else {
         addToast(data.generatePost.message || "❌ Erreur", "error");
@@ -198,7 +202,7 @@ export default function GenererPost() {
       setLoading(false);
       if (data.createPost.success && data.createPost.post) {
         setPostsHistory((prev) => [data.createPost.post, ...prev]);
-        addToast(data.createPost.post.scheduledAt ? "📅 Post programmé !" : " Post créé avec success !", "success");
+        addToast(data.createPost.post.scheduledAt ? "📅 Post programmé !" : "✅ Post créé avec succès !", "success");
         resetForm();
       } else {
         addToast(data.createPost.message || "❌ Erreur", "error");
@@ -219,7 +223,7 @@ export default function GenererPost() {
   const [publishPostMutation] = useMutation(PUBLISH_POST, {
     onCompleted: (data) => {
       setPostsHistory((prev) => prev.map((p) => (p.id === data.publishPost.post.id ? data.publishPost.post : p)));
-      addToast("Post publié !", "success");
+      addToast("✅ Post publié !", "success");
     },
     onError: (error) => addToast(`❌ ${error.message}`, "error"),
   });
@@ -231,7 +235,7 @@ export default function GenererPost() {
       addToast("⚠️ Le thème est obligatoire !", "error");
       return;
     }
-    if (useAIContent && !useAI && !editorRef.current?.innerHTML.trim() && !imageUrl && !imageFile) {
+    if (useAIContent && !useAI && !editorContent.trim() && !imageUrl && !imageFile) {
       addToast("⚠️ Le texte ou une image est obligatoire !", "error");
       return;
     }
@@ -290,7 +294,7 @@ export default function GenererPost() {
       if (useAIContent && useAI) {
         await generatePostMutation({ variables: { theme, tone: tone || null, length, imageUrl: finalImageUrl, scheduledAt, recaptchaToken: token } });
       } else {
-        const content = useAIContent ? (editorRef.current?.innerHTML || "") : "";
+        const content = useAIContent ? editorContent : "";
         await createPostMutation({ variables: { content, imageUrl: finalImageUrl, scheduledAt, recaptchaToken: token } });
       }
     } catch (err) {
@@ -307,12 +311,11 @@ export default function GenererPost() {
         return;
       }
       setImageFile(file);
-      addToast(" Image ajoutée !", "success");
+      addToast("✅ Image ajoutée !", "success");
     }
   };
 
   const handlePublish = async (id, content, postImageUrl) => {
-    // Créer l'URL LinkedIn
     const textOnly = content ? content.replace(/<[^>]*>?/gm, "").trim() : "";
     let linkedInUrl = "https://www.linkedin.com/feed/";
     
@@ -320,23 +323,26 @@ export default function GenererPost() {
       linkedInUrl = `https://www.linkedin.com/feed/?shareActive=true&text=${encodeURIComponent(textOnly)}`;
     }
     
-    // Ouvrir la fenêtre LinkedIn
     const linkedInWindow = window.open(linkedInUrl, "_blank", "width=800,height=600");
     
-    // Marquer le post comme publié
     await publishPostMutation({ variables: { id: parseInt(id) } });
     
-    // Attendre un peu avant de vérifier
     setTimeout(() => {
       if (linkedInWindow && !linkedInWindow.closed) {
-        // Si l'utilisateur a partagé manuellement, on peut fermer la fenêtre après un délai
         setTimeout(() => {
           if (linkedInWindow && !linkedInWindow.closed) {
             linkedInWindow.close();
           }
-        }, 5000); // Fermer après 5 secondes
+        }, 5000);
       }
     }, 1000);
+  };
+
+  // Capturer les changements de l'éditeur
+  const handleEditorInput = () => {
+    if (editorRef.current) {
+      setEditorContent(editorRef.current.innerHTML);
+    }
   };
 
   return (
@@ -364,13 +370,13 @@ export default function GenererPost() {
           className={`px-6 py-3 rounded-xl font-bold shadow-sm transition-all ${useAIContent ? "bg-blue-900 text-white" : "bg-blue-50 text-blue-900"}`} 
           onClick={() => setUseAIContent(true)}
         >
-           Contenu Textuel
+          📝 Contenu Textuel
         </button>
         <button 
           className={`px-6 py-3 rounded-xl font-bold shadow-sm transition-all ${!useAIContent ? "bg-blue-900 text-white" : "bg-blue-50 text-blue-900"}`} 
           onClick={() => setUseAIContent(false)}
         >
-          Contenu Visuel
+          🎨 Contenu Visuel
         </button>
       </div>
 
@@ -447,6 +453,7 @@ export default function GenererPost() {
                 ref={editorRef} 
                 contentEditable 
                 suppressContentEditableWarning 
+                onInput={handleEditorInput}
                 className="border p-4 rounded-xl min-h-[150px] shadow-sm focus:ring-2 focus:ring-blue-900" 
               />
             </>
@@ -464,50 +471,61 @@ export default function GenererPost() {
             </label>
           </div>
         </div>
-      )}{/* ================= PRÉVISUALISATION ================= */}
-<div className="mt-8 bg-white border rounded-2xl shadow-md p-6">
-  <h3 className="text-xl font-bold text-blue-900 mb-4">
-    👁️ Prévisualisation du post
-  </h3>
+      )}
 
-  {/* Texte */}
-  {useAIContent && !useAI && editorRef.current?.innerHTML?.trim() && (
-    <div
-      className="prose max-w-none mb-4"
-      dangerouslySetInnerHTML={{ __html: editorRef.current.innerHTML }}
-    />
-  )}
+      {/* ================= PRÉVISUALISATION ================= */}
+      <div className="mt-8 bg-white border rounded-2xl shadow-md p-6">
+        <h3 className="text-xl font-bold text-blue-900 mb-4">
+          👁️ Prévisualisation du post
+        </h3>
 
-  {useAIContent && useAI && theme && (
-    <p className="text-gray-600 italic mb-4">
-      ✨ Le contenu sera généré par IA à partir du thème :
-      <span className="font-semibold"> {theme}</span>
-    </p>
-  )}
+        {/* Texte */}
+        {useAIContent && !useAI && editorContent.trim() && (
+          <div
+            className="prose max-w-none mb-4 p-4 bg-gray-50 rounded-lg"
+            dangerouslySetInnerHTML={{ __html: editorContent }}
+          />
+        )}
 
-  {/* Image */}
-  {(imageUrl || imageFile) && (
-    <div className="mt-4">
-      <img
-        src={imageUrl || URL.createObjectURL(imageFile)}
-        alt="Prévisualisation"
-        className="w-full max-w-md rounded-xl border shadow-sm"
-      />
-    </div>
-  )}
+        {useAIContent && useAI && theme && (
+          <p className="text-gray-600 italic mb-4 p-4 bg-blue-50 rounded-lg">
+            ✨ Le contenu sera généré par IA à partir du thème :
+            <span className="font-semibold text-blue-900"> {theme}</span>
+            {tone && <span className="block mt-1 text-sm">Ton : {tone}</span>}
+            {length && <span className="block text-sm">Longueur : {length}</span>}
+          </p>
+        )}
 
-  {/* Infos programmation */}
-  {scheduled && scheduledDate && scheduledTime && (
-    <p className="text-sm text-gray-500 mt-4">
-      📅 Programmé pour le{" "}
-      <strong>
-        {new Date(`${scheduledDate}T${scheduledTime}`).toLocaleString("fr-FR")}
-      </strong>
-    </p>
-  )}
-</div>
-{/* ================= FIN PRÉVISUALISATION ================= */}
+        {/* Image */}
+        {(imageUrl || imageFile) && (
+          <div className="mt-4">
+            <p className="text-sm font-semibold text-gray-700 mb-2">📷 Image :</p>
+            <img
+              src={imageUrl || URL.createObjectURL(imageFile)}
+              alt="Prévisualisation"
+              className="w-full max-w-md rounded-xl border shadow-sm"
+            />
+          </div>
+        )}
 
+        {/* Infos programmation */}
+        {scheduled && scheduledDate && scheduledTime && (
+          <p className="text-sm text-gray-500 mt-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+            📅 Programmé pour le{" "}
+            <strong>
+              {new Date(`${scheduledDate}T${scheduledTime}`).toLocaleString("fr-FR")}
+            </strong>
+          </p>
+        )}
+
+        {/* Message si vide */}
+        {!editorContent.trim() && !theme && !imageUrl && !imageFile && (
+          <p className="text-gray-400 italic text-center py-8">
+            Aucun contenu à prévisualiser pour le moment...
+          </p>
+        )}
+      </div>
+      {/* ================= FIN PRÉVISUALISATION ================= */}
 
       {!useAIContent && (
         <div className="bg-white p-6 rounded-2xl shadow-md border mt-6">
@@ -517,16 +535,6 @@ export default function GenererPost() {
             getValidToken={getValidToken} 
             addToast={addToast} 
           />
-          {(imageUrl || imageFile) && (
-            <div className="mt-6 bg-gray-50 p-6 rounded-xl border">
-              <p className="mb-3"><strong>👁️ Prévisualisation :</strong></p>
-              <img 
-                src={imageUrl || URL.createObjectURL(imageFile)} 
-                alt="Preview" 
-                className="w-full max-w-sm rounded-lg shadow-sm border" 
-              />
-            </div>
-          )}
         </div>
       )}
 
@@ -583,13 +591,15 @@ export default function GenererPost() {
             : "bg-blue-900 text-white hover:bg-blue-950"
         }`}
       >
-        {loading ? "Génération..." : !isRecaptchaValidated ? "Valider le reCAPTCHA d'abord" : "Générer / Enregistrer"}
+        {loading ? "⏳ Génération..." : !isRecaptchaValidated ? "🔒 Valider le reCAPTCHA d'abord" : "🚀 Générer / Enregistrer"}
       </button>
 
-       <div className="mt-8 space-y-4">
-        <h3 className="font-semibold text-lg"> Historique des posts :</h3>
+      <div className="mt-8 space-y-4">
+        <h3 className="font-semibold text-lg">📋 Historique des posts :</h3>
+        {postsHistory.length === 0 && (
+          <p className="text-gray-400 italic text-center py-8">Aucun post pour le moment...</p>
+        )}
         {postsHistory.map((post) => {
-       
           const now = new Date();
           const scheduledDate = post.scheduledAt ? new Date(post.scheduledAt) : null;
           const isPublished = post.status?.toLowerCase().includes("pub");
@@ -622,33 +632,32 @@ export default function GenererPost() {
                     </span>
                   ) : isFuture ? (
                     <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs font-semibold">
-                       Programmé
+                      ⏱️ Programmé
                     </span>
                   ) : isPublished ? (
                     <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-semibold">
-                      Publié
+                      ✅ Publié
                     </span>
                   ) : (
                     <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-semibold">
-                       Brouillon
+                      📝 Brouillon
                     </span>
                   )}
                 </div>
               </div>
-            <div className="flex gap-2 mt-2 md:mt-0">
-              
+              <div className="flex gap-2 mt-2 md:mt-0">
                 {!isPublished && post.content && post.content.trim() !== "" && (
-                    <button
-                      onClick={() => handlePublish(post.id, post.content, post.imageUrl)}
-                      className={`flex items-center gap-2 px-4 py-2 text-white rounded-lg ${
-                        isPastDue
-                          ? "bg-red-600 hover:bg-red-700 animate-pulse"
-                          : "bg-blue-900 hover:bg-blue-950"
-                      }`}
-                    >
-                      <FaLinkedin size={18} />
-                      Publier sur LinkedIn
-                    </button>
+                  <button
+                    onClick={() => handlePublish(post.id, post.content, post.imageUrl)}
+                    className={`flex items-center gap-2 px-4 py-2 text-white rounded-lg ${
+                      isPastDue
+                        ? "bg-red-600 hover:bg-red-700 animate-pulse"
+                        : "bg-blue-900 hover:bg-blue-950"
+                    }`}
+                  >
+                    <FaLinkedin size={18} />
+                    Publier sur LinkedIn
+                  </button>
                 )}
               </div>
             </div>
@@ -656,6 +665,5 @@ export default function GenererPost() {
         })}
       </div>
     </div>
-   
   );
 }
