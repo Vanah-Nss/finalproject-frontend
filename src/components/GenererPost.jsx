@@ -535,6 +535,18 @@ export default function GenererPost() {
             getValidToken={getValidToken} 
             addToast={addToast} 
           />
+          
+          {/* Prévisualisation de l'image générée */}
+          {(imageUrl || imageFile) && (
+            <div className="mt-6 bg-gray-50 p-6 rounded-xl border">
+              <p className="mb-3 font-semibold text-gray-700">👁️ Prévisualisation :</p>
+              <img 
+                src={imageUrl || URL.createObjectURL(imageFile)} 
+                alt="Preview" 
+                className="w-full max-w-sm rounded-lg shadow-sm border" 
+              />
+            </div>
+          )}
         </div>
       )}
 
@@ -640,7 +652,7 @@ export default function GenererPost() {
                     </span>
                   ) : (
                     <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-semibold">
-                      📝 Brouillon
+                       Brouillon
                     </span>
                   )}
                 </div>
