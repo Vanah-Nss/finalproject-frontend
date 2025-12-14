@@ -464,7 +464,50 @@ export default function GenererPost() {
             </label>
           </div>
         </div>
-      )}
+      )}{/* ================= PRÉVISUALISATION ================= */}
+<div className="mt-8 bg-white border rounded-2xl shadow-md p-6">
+  <h3 className="text-xl font-bold text-blue-900 mb-4">
+    👁️ Prévisualisation du post
+  </h3>
+
+  {/* Texte */}
+  {useAIContent && !useAI && editorRef.current?.innerHTML?.trim() && (
+    <div
+      className="prose max-w-none mb-4"
+      dangerouslySetInnerHTML={{ __html: editorRef.current.innerHTML }}
+    />
+  )}
+
+  {useAIContent && useAI && theme && (
+    <p className="text-gray-600 italic mb-4">
+      ✨ Le contenu sera généré par IA à partir du thème :
+      <span className="font-semibold"> {theme}</span>
+    </p>
+  )}
+
+  {/* Image */}
+  {(imageUrl || imageFile) && (
+    <div className="mt-4">
+      <img
+        src={imageUrl || URL.createObjectURL(imageFile)}
+        alt="Prévisualisation"
+        className="w-full max-w-md rounded-xl border shadow-sm"
+      />
+    </div>
+  )}
+
+  {/* Infos programmation */}
+  {scheduled && scheduledDate && scheduledTime && (
+    <p className="text-sm text-gray-500 mt-4">
+      📅 Programmé pour le{" "}
+      <strong>
+        {new Date(`${scheduledDate}T${scheduledTime}`).toLocaleString("fr-FR")}
+      </strong>
+    </p>
+  )}
+</div>
+{/* ================= FIN PRÉVISUALISATION ================= */}
+
 
       {!useAIContent && (
         <div className="bg-white p-6 rounded-2xl shadow-md border mt-6">
