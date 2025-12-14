@@ -14,7 +14,7 @@ function Navbar() {
   const menuItems = [
     { label: "Accueil", to: "hero" },
     { label: "Fonctionnalités", to: "features" },
-    { label: "Tarifs", to: "audience" },
+    { label: "Public cible", to: "audience" },
   ];
 
   useEffect(() => {
@@ -73,7 +73,7 @@ function Navbar() {
             {isSignedIn ? (
               <UserButton afterSignOutUrl="/" />
             ) : (
-              <SignInButton mode="modal" redirectUrl="/dashboard">
+<SignInButton mode="modal">
                 <button
                   aria-label="Connexion LinkedIn"
                   className="relative flex items-center gap-3 bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 text-white font-semibold px-6 py-3 rounded-3xl shadow-2xl transition-all duration-300 transform hover:scale-105 focus:ring-4 focus:ring-blue-300 overflow-hidden"
@@ -128,33 +128,23 @@ function Navbar() {
               </li>
             ))}
 
-            <li>
-              {isSignedIn ? (
-                <UserButton
-                  afterSignOutUrl="/"
-                  appearance={{
-                    elements: {
-                      userButton:
-                        "px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-700 rounded-2xl shadow-lg hover:from-blue-600 hover:to-blue-800 text-white font-semibold transition-all duration-300",
-                    },
-                    variables: {
-                      borderRadius: "14px",
-                      colorPrimary: "#0A66C2",
-                      fontFamily: "Inter, sans-serif",
-                    },
-                  }}
-                />
-              ) : (
-                <SignInButton mode="modal" redirectUrl="/dashboard">
-                  <button className="relative flex items-center gap-3 bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 text-white font-semibold px-6 py-3 rounded-3xl shadow-2xl transition-all duration-300 transform hover:scale-105 overflow-hidden">
-                    <FaLinkedin size={20} className="animate-pulse" />
-                    <span>Se connecter avec LinkedIn</span>
-                    <span className="absolute w-24 h-24 bg-blue-400 rounded-full mix-blend-multiply filter blur-2xl opacity-30 animate-ping -top-4 -left-6"></span>
-                    <span className="absolute w-32 h-32 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-ping -bottom-6 -right-8"></span>
-                  </button>
-                </SignInButton>
-              )}
-            </li>
+         <li>
+  {isSignedIn ? (
+    <UserButton afterSignOutUrl="/" />
+  ) : (
+    <SignInButton mode="modal">
+      <button
+        aria-label="Connexion LinkedIn"
+        className="relative flex items-center gap-3 bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 text-white font-semibold px-6 py-3 rounded-3xl shadow-2xl transition-all duration-300 transform hover:scale-105 focus:ring-4 focus:ring-blue-300 overflow-hidden"
+      >
+        <FaLinkedin size={20} className="animate-pulse" />
+        <span>Se connecter avec LinkedIn</span>
+        <span className="absolute w-24 h-24 bg-blue-400 rounded-full mix-blend-multiply filter blur-2xl opacity-30 animate-ping -top-4 -left-6"></span>
+        <span className="absolute w-32 h-32 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-ping -bottom-6 -right-8"></span>
+      </button>
+    </SignInButton>
+  )}
+</li>
           </ul>
         </div>
       )}
@@ -234,8 +224,8 @@ function Hero() {
           et démarquez-vous avec des visuels & textes haut de gamme.
         </p>
 
-      <div className="flex flex-col sm:flex-row gap-6 justify-center md:justify-start items-center pt-4">
-  <SignInButton mode="modal" redirectUrl="/dashboard">
+ <div className="flex flex-col sm:flex-row gap-6 justify-center md:justify-start items-center pt-4">
+  <SignInButton mode="modal">
     <button className="group bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 text-white px-8 py-4 rounded-full font-semibold shadow-lg hover:shadow-blue-500/30 transition-all duration-300 transform hover:scale-105 flex items-center gap-3">
       Commencer maintenant
       <FiArrowRight className="group-hover:translate-x-1 transition-transform duration-300" />
@@ -353,19 +343,19 @@ function TargetAudience() {
       title: "Agences de Communication",
       desc: "Multipliez votre productivité créative",
       icon: "🏢",
-      tarif: "À partir de 29€/mois",
+     
     },
     {
       title: "Freelances & Community Managers",
       desc: "Créez du contenu premium rapidement",
       icon: "💼",
-      tarif: "Pack Pro dès 12€/mois",
+      
     },
     {
       title: "Utilisateurs LinkedIn & Recruteurs",
       desc: "Optimisez vos campagnes de recrutement",
       icon: "👥",
-      tarif: "A partir de 19€/mois",
+    
     },
   ];
 
@@ -479,7 +469,7 @@ function Footer() {
             <h4 className="font-semibold mb-6">Produit</h4>
             <ul className="space-y-3 text-white/70">
               <li><a href="#" className="hover:text-white transition-colors duration-300">Fonctionnalités</a></li>
-              <li><a href="#" className="hover:text-white transition-colors duration-300">Tarifs</a></li>
+              <li><a href="#" className="hover:text-white transition-colors duration-300">Public cible</a></li>
 
             </ul>
           </div>
