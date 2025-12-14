@@ -50,20 +50,31 @@ export default function Parametres({ theme, toggleTheme }) {
 
         <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
         
-          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-6 shadow-lg">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-                Apparence
-              </h3>
-              <button
-                onClick={toggleTheme}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg ring-1 ring-gray-200 dark:ring-gray-700 hover:scale-105 transition-transform"
-              >
-                {theme === "dark" ? <FiMoon /> : <FiSun />}
-                {theme === "dark" ? "Sombre" : "Clair"}
-              </button>
-            </div>
-          </div>
+          <div className="space-y-6">
+                       {/* Gestion du compte */}
+                       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 p-6">
+                         <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-50 mb-4 flex items-center gap-2">
+                           <FiSettings className="text-blue-600 dark:text-blue-400" />
+                           Gestion du compte
+                         </h4>
+                         <div className="space-y-4">
+                           <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-700 rounded-xl p-4 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
+                             <div>
+                               <p className="font-medium text-gray-900 dark:text-gray-50">Paramètres Clerk</p>
+                               <p className="text-sm text-gray-600 dark:text-gray-400">Gérer la sécurité</p>
+                             </div>
+                             <UserButton 
+                               afterSignOutUrl="/" 
+                               appearance={{ 
+                                 elements: { 
+                                   avatarBox: "w-10 h-10 border-2 border-blue-600 dark:border-blue-400",
+                                   rootBox: "flex items-center justify-center"
+                                 } 
+                               }} 
+                             />
+                           </div>
+                         </div>
+                       </div>
 
           <div className="md:col-span-2 bg-gradient-to-r from-white via-gray-50 to-white dark:from-gray-800 dark:via-gray-800 dark:to-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl p-6 shadow-2xl">
             <div className="flex flex-col md:flex-row items-center gap-6">

@@ -63,21 +63,24 @@ export default function Dashboard() {
   if (!isLoaded) return <p className="p-6">Chargement du profil…</p>;
 
   if (!isSignedIn) {
-    return <RedirectToSignIn redirectUrl="/dashboard" />;
+    return <RedirectToSignIn  />;
   }
 
   const linkedInAccount = user.externalAccounts?.find(
     (acc) => acc.provider === "oauth_linkedin"
   );
 
-  const profile = {
-    firstName: linkedInAccount?.firstName || user.firstName,
-    lastName: linkedInAccount?.lastName || user.lastName,
-    email: linkedInAccount?.emailAddress || user.primaryEmailAddress?.emailAddress,
-    avatar: linkedInAccount?.imageUrl || user.imageUrl,
-    profileUrl: `https://www.linkedin.com/in/${linkedInAccount?.username || ""}`,
-    headline: linkedInAccount?.username || "Profil LinkedIn",
-  };
+// Clerk = source principale
+const profile = {
+  firstName: user.firstName || linkedInAccount?.firstName,
+  lastName: user.lastName || linkedInAccount?.lastName,
+  email: user.primaryEmailAddress?.emailAddress || linkedInAccount?.emailAddress,
+  avatar: user.imageUrl || linkedInAccount?.imageUrl,
+  profileUrl: linkedInAccount
+    ? `https://www.linkedin.com/in/${linkedInAccount.username}`
+    : "",
+  headline: "Profil utilisateur",
+};
 
   const menuItems = [
     { name: "Tableau de Bord", icon: <FiHome /> },
@@ -147,32 +150,7 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              {/* Sidebar Actions */}
-              <div className="space-y-6">
-                {/* Gestion du compte */}
-                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 p-6">
-                  <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-50 mb-4 flex items-center gap-2">
-                    <FiSettings className="text-blue-600 dark:text-blue-400" />
-                    Gestion du compte
-                  </h4>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-700 rounded-xl p-4 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
-                      <div>
-                        <p className="font-medium text-gray-900 dark:text-gray-50">Paramètres Clerk</p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Gérer la sécurité</p>
-                      </div>
-                      <UserButton 
-                        afterSignOutUrl="/" 
-                        appearance={{ 
-                          elements: { 
-                            avatarBox: "w-10 h-10 border-2 border-blue-600 dark:border-blue-400",
-                            rootBox: "flex items-center justify-center"
-                          } 
-                        }} 
-                      />
-                    </div>
-                  </div>
-                </div>
+          
 
                 {/* LinkedIn Connection */}
                 {linkedInAccount && (
@@ -252,7 +230,8 @@ export default function Dashboard() {
               }`}
             >
               <span className="mr-3 text-xl">{item.icon}</span>
-              <span className="font-medium text-lg">{item.name}</span>
+            <span className="font-bold text-xl">{item.name}</span>
+
             </li>
           ))}
         </ul>
@@ -275,6 +254,13 @@ export default function Dashboard() {
             <FiMenu size={28} />
           </button>
           <div className="flex-1"></div>
+          <button
+            onClick={toggleTheme}
+            className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+            title={theme === "dark" ? "Passer en mode clair" : "Passer en mode sombre"}
+          >
+            {theme === "dark" ? "☀️" : "🌙"}
+          </button>
         </header>
 
         <main className="flex-1 p-6 bg-gray-50 dark:bg-gray-900">

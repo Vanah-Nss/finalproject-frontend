@@ -232,7 +232,7 @@ export default function Historique() {
     if (s.includes("pub")) {
       return (
         <span className="bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 px-3 py-1 rounded-full text-xs font-bold shadow-sm">
-          ✅ Publié
+           Publié
         </span>
       );
     }
@@ -336,7 +336,7 @@ export default function Historique() {
       });
 
       if (updateData?.updatePost?.post) {
-        addToast("✅ Post modifié avec succès !", "success");
+        addToast(" Post modifié avec succès !", "success");
         refetch();
         closeModal();
       } else addToast("❌ Erreur lors de la modification du post", "error");
@@ -508,7 +508,7 @@ const downloadImage = async (url, filename) => {
       <div className="mb-4 relative w-full max-w-md">
         <input
           type="text"
-          placeholder="🔍 Rechercher par contenu..."
+          placeholder=" Rechercher par contenu..."
           value={searchText}
           onChange={(e) => setSearchText(e.target.value)}
           className="border border-gray-300 rounded-xl p-3 pl-10 w-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all shadow-sm"
@@ -527,7 +527,7 @@ const downloadImage = async (url, filename) => {
 
       {filteredPosts.length === 0 ? (
         <div className="text-center py-12">
-          <p className="text-gray-400 text-lg">📭 Aucun post correspondant</p>
+          <p className="text-gray-400 text-lg"> Aucun post correspondant</p>
         </div>
       ) : (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -624,7 +624,7 @@ const downloadImage = async (url, filename) => {
 
             {modalType === "edit" && (
               <>
-                <h3 className="text-2xl font-bold mb-5 text-gray-800">✏️ Modifier le post</h3>
+                <h3 className="text-2xl font-bold mb-5 text-gray-800"> Modifier le post</h3>
                 <textarea
                   className="w-full border border-gray-300 rounded-xl p-4 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4 shadow-sm"
                   rows={6}
@@ -645,7 +645,7 @@ const downloadImage = async (url, filename) => {
 
             {modalType === "delete" && (
               <>
-                <h3 className="text-2xl font-bold mb-4 text-gray-800">🗑️ Supprimer le post ?</h3>
+                <h3 className="text-2xl font-bold mb-4 text-gray-800"> Supprimer le post ?</h3>
                 <p className="mb-6 text-gray-600">Cette action est <strong>irréversible</strong>.</p>
                 <div className="flex justify-end gap-3">
                   <button onClick={closeModal} className="px-5 py-2.5 rounded-xl border border-gray-300 hover:bg-gray-50 transition-colors font-medium">Annuler</button>
