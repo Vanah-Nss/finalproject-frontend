@@ -1,4 +1,4 @@
-// Dashboard.jsx - Section "Mon Profil" sans statistiques
+// Dashboard.jsx - Section "Mon Profil" sans les statistiques
 import { useState, useEffect } from "react";
 import {
   FiMenu,
@@ -34,6 +34,8 @@ const ALL_POSTS = gql`
 
 export default function Dashboard() {
   const { user, isLoaded, isSignedIn, signOut } = useUser();
+
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeMenu, setActiveMenu] = useState("Tableau de Bord");
   const [theme, setTheme] = useState(localStorage.getItem("theme") || "light");
   const [showMessage, setShowMessage] = useState(false);
@@ -42,9 +44,15 @@ export default function Dashboard() {
   useQuery(ALL_POSTS, { pollInterval: 30000 });
 
   useEffect(() => {
-    document.documentElement.classList.toggle("dark", theme === "dark");
+    const root = document.documentElement;
+    theme === "dark"
+      ? root.classList.add("dark")
+      : root.classList.remove("dark");
     localStorage.setItem("theme", theme);
   }, [theme]);
+
+  const toggleTheme = () =>
+    setTheme((t) => (t === "dark" ? "light" : "dark"));
 
   useEffect(() => {
     if (isSignedIn) {
@@ -54,7 +62,7 @@ export default function Dashboard() {
     }
   }, [isSignedIn]);
 
-  if (!isLoaded) return <p className="p-6">Chargement…</p>;
+  if (!isLoaded) return <p className="p-6">Chargement du profil…</p>;
   if (!isSignedIn) return <RedirectToSignIn />;
 
   const linkedInAccount = user.externalAccounts?.find(
@@ -62,10 +70,12 @@ export default function Dashboard() {
   );
 
   const profile = {
-    firstName: user.firstName,
-    lastName: user.lastName,
-    email: user.primaryEmailAddress?.emailAddress,
-    avatar: user.imageUrl,
+    firstName: user.firstName || linkedInAccount?.firstName,
+    lastName: user.lastName || linkedInAccount?.lastName,
+    email:
+      user.primaryEmailAddress?.emailAddress ||
+      linkedInAccount?.emailAddress,
+    avatar: user.imageUrl || linkedInAccount?.imageUrl,
     profileUrl: linkedInAccount
       ? `https://www.linkedin.com/in/${linkedInAccount.username}`
       : "",
@@ -92,61 +102,68 @@ export default function Dashboard() {
           <Parametres
             profile={profile}
             theme={theme}
-            toggleTheme={() =>
-              setTheme((t) => (t === "dark" ? "light" : "dark"))
-            }
+            toggleTheme={toggleTheme}
           />
         );
 
       case "Mon Profil":
         return (
-          <div className="max-w-5xl mx-auto">
-            <h2 className="text-4xl font-bold text-center mb-10">Mon Profil</h2>
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center mb-10">
+              <h2 className="text-4xl font-bold mb-4 bg-gradient-to-r from-blue-900 to-blue-600 bg-clip-text text-transparent">
+                Mon Profil
+              </h2>
+              <p className="text-gray-600 dark:text-gray-400 text-lg">
+                Gérez vos informations personnelles
+              </p>
+            </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              {/* Carte Profil */}
-              <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-3xl shadow-lg overflow-hidden">
-                <div className="bg-blue-800 h-32 relative">
-                  <img
-                    src={profile.avatar}
-                    alt="Profil"
-                    className="absolute -bottom-16 left-8 w-32 h-32 rounded-full border-4 border-white"
-                  />
-                </div>
+              {/* Profil principal */}
+              <div className="lg:col-span-2">
+                <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-lg border overflow-hidden">
+                  <div className="bg-gradient-to-r from-blue-900 to-blue-700 h-32 relative">
+                    <img
+                      src={profile.avatar}
+                      alt="Profil"
+                      className="absolute -bottom-16 left-8 w-32 h-32 rounded-full border-4 border-white shadow-xl"
+                    />
+                  </div>
 
-                <div className="pt-20 px-8 pb-8">
-                  <h3 className="text-2xl font-bold">
-                    {profile.firstName} {profile.lastName}
-                  </h3>
-                  <p className="flex items-center gap-2 text-gray-500">
-                    <FiMail /> {profile.email}
-                  </p>
+                  <div className="pt-20 px-8 pb-8">
+                    <h3 className="text-2xl font-bold mb-2">
+                      {profile.firstName} {profile.lastName}
+                    </h3>
+                    <p className="flex items-center gap-2 text-gray-600">
+                      <FiMail /> {profile.email}
+                    </p>
+                  </div>
                 </div>
               </div>
 
               {/* LinkedIn */}
               {linkedInAccount && (
-                <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow">
+                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border p-6">
                   <h4 className="font-semibold flex items-center gap-2 mb-4">
-                    <FiLinkedin /> LinkedIn
+                    <FiLinkedin /> Profil LinkedIn
                   </h4>
                   <a
                     href={profile.profileUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-blue-600 hover:underline flex items-center gap-2"
+                    className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg"
                   >
-                    Voir le profil <FiExternalLink />
+                    Voir mon profil <FiExternalLink size={14} />
                   </a>
                 </div>
               )}
 
               {/* Actions */}
-              <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow">
+              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border p-6">
                 <h4 className="font-semibold mb-4">Actions rapides</h4>
                 <button
                   onClick={() => setActiveMenu("Générer post")}
-                  className="w-full p-3 bg-blue-600 text-white rounded-xl"
+                  className="w-full p-3 rounded-xl bg-blue-50 text-blue-700"
                 >
                   Créer un post
                 </button>
@@ -161,40 +178,48 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="flex h-screen bg-gray-100 dark:bg-gray-900">
+    <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
       {/* Sidebar */}
-      <aside className="w-64 bg-white dark:bg-gray-800 p-6">
-        <h1 className="text-2xl font-bold mb-8">Linkpostify</h1>
-        {menuItems.map((item) => (
-          <div
-            key={item.name}
-            onClick={() => setActiveMenu(item.name)}
-            className={`p-3 rounded-lg cursor-pointer flex items-center gap-3 mb-2 ${
-              activeMenu === item.name
-                ? "bg-blue-600 text-white"
-                : "hover:bg-gray-200 dark:hover:bg-gray-700"
-            }`}
-          >
-            {item.icon}
-            {item.name}
+      <div className="fixed inset-y-0 left-0 w-64 bg-white dark:bg-gray-800 shadow-md flex flex-col">
+        <div className="p-6 text-2xl font-bold border-b">
+          Linkpostify
+        </div>
+
+        <ul className="mt-6 space-y-3 flex-1 px-3">
+          {menuItems.map((item) => (
+            <li
+              key={item.name}
+              onClick={() => setActiveMenu(item.name)}
+              className={`flex items-center p-4 rounded-md cursor-pointer ${
+                activeMenu === item.name
+                  ? "bg-blue-900 text-white"
+                  : "hover:bg-gray-200 dark:hover:bg-gray-700"
+              }`}
+            >
+              <span className="mr-3">{item.icon}</span>
+              {item.name}
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <main className="flex-1 ml-64 p-6">
+        <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-md min-h-full">
+          {renderContent()}
+        </div>
+
+        {showMessage && (
+          <div className="fixed top-20 right-5 bg-blue-600 text-white px-6 py-4 rounded-2xl shadow-xl">
+            Bienvenue {profile.firstName} 👋
           </div>
-        ))}
-      </aside>
+        )}
 
-      {/* Main */}
-      <main className="flex-1 p-6 overflow-y-auto">{renderContent()}</main>
-
-      {showMessage && (
-        <div className="fixed top-6 right-6 bg-blue-600 text-white p-4 rounded-xl">
-          Bienvenue {profile.firstName} 👋
-        </div>
-      )}
-
-      {toast && (
-        <div className="fixed bottom-6 right-6 bg-white p-4 shadow rounded">
-          {toast}
-        </div>
-      )}
+        {toast && (
+          <div className="fixed bottom-6 right-6 bg-white p-4 shadow rounded">
+            {toast}
+          </div>
+        )}
+      </main>
     </div>
   );
 }
