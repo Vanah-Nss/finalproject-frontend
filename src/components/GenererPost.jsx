@@ -473,6 +473,17 @@ export default function GenererPost() {
         </div>
       )}
 
+      {!useAIContent && (
+        <div className="bg-white p-6 rounded-2xl shadow-md border mt-6">
+          <h3 className="font-semibold text-lg mb-4">Générateur d'image IA</h3>
+          <ImageGenerator 
+            setImageUrl={setImageUrl} 
+            getValidToken={getValidToken} 
+            addToast={addToast} 
+          />
+        </div>
+      )}
+
       {/* ================= PRÉVISUALISATION ================= */}
       <div className="mt-8 bg-white border rounded-2xl shadow-md p-6">
         <h3 className="text-xl font-bold text-blue-900 mb-4">
@@ -526,29 +537,6 @@ export default function GenererPost() {
         )}
       </div>
       {/* ================= FIN PRÉVISUALISATION ================= */}
-
-      {!useAIContent && (
-        <div className="bg-white p-6 rounded-2xl shadow-md border mt-6">
-          <h3 className="font-semibold text-lg mb-4">Générateur d'image IA</h3>
-          <ImageGenerator 
-            setImageUrl={setImageUrl} 
-            getValidToken={getValidToken} 
-            addToast={addToast} 
-          />
-          
-          {/* Prévisualisation de l'image générée */}
-          {(imageUrl || imageFile) && (
-            <div className="mt-6 bg-gray-50 p-6 rounded-xl border">
-              <p className="mb-3 font-semibold text-gray-700">👁️ Prévisualisation :</p>
-              <img 
-                src={imageUrl || URL.createObjectURL(imageFile)} 
-                alt="Preview" 
-                className="w-full max-w-sm rounded-lg shadow-sm border" 
-              />
-            </div>
-          )}
-        </div>
-      )}
 
       <div className="mt-6">
         <ReCAPTCHA
@@ -652,7 +640,7 @@ export default function GenererPost() {
                     </span>
                   ) : (
                     <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-semibold">
-                       Brouillon
+                      📝 Brouillon
                     </span>
                   )}
                 </div>
