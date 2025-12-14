@@ -109,7 +109,7 @@ function ImageGenerator({ setImageUrl, getValidToken, addToast }) {
         disabled={loading}
         className="bg-blue-900 text-white px-5 py-3 rounded-xl hover:bg-blue-950 shadow-md font-semibold disabled:opacity-50"
       >
-        {loading ? "🔄 Génération en cours..." : "✨ Générer l'image"}
+        {loading ? "🔄 Génération en cours..." : " Générer l'image"}
       </button>
     </div>
   );
@@ -185,7 +185,7 @@ export default function GenererPost() {
       setLoading(false);
       if (data.generatePost.success && data.generatePost.post) {
         setPostsHistory((prev) => [data.generatePost.post, ...prev]);
-        addToast(data.generatePost.post.scheduledAt ? "📅 Post IA programmé !" : "✅ Post IA généré !", "success");
+        addToast(data.generatePost.post.scheduledAt ? "📅 Post IA programmé !" : " Post IA généré !", "success");
         resetForm();
       } else {
         addToast(data.generatePost.message || "❌ Erreur", "error");
@@ -202,7 +202,7 @@ export default function GenererPost() {
       setLoading(false);
       if (data.createPost.success && data.createPost.post) {
         setPostsHistory((prev) => [data.createPost.post, ...prev]);
-        addToast(data.createPost.post.scheduledAt ? "📅 Post programmé !" : "✅ Post créé avec succès !", "success");
+        addToast(data.createPost.post.scheduledAt ? "📅 Post programmé !" : " Post créé avec succès !", "success");
         resetForm();
       } else {
         addToast(data.createPost.message || "❌ Erreur", "error");
@@ -223,7 +223,7 @@ export default function GenererPost() {
   const [publishPostMutation] = useMutation(PUBLISH_POST, {
     onCompleted: (data) => {
       setPostsHistory((prev) => prev.map((p) => (p.id === data.publishPost.post.id ? data.publishPost.post : p)));
-      addToast("✅ Post publié !", "success");
+      addToast("Post publié !", "success");
     },
     onError: (error) => addToast(`❌ ${error.message}`, "error"),
   });
@@ -311,7 +311,7 @@ export default function GenererPost() {
         return;
       }
       setImageFile(file);
-      addToast("✅ Image ajoutée !", "success");
+      addToast(" Image ajoutée !", "success");
     }
   };
 
@@ -370,13 +370,13 @@ export default function GenererPost() {
           className={`px-6 py-3 rounded-xl font-bold shadow-sm transition-all ${useAIContent ? "bg-blue-900 text-white" : "bg-blue-50 text-blue-900"}`} 
           onClick={() => setUseAIContent(true)}
         >
-          📝 Contenu Textuel
+           Contenu Textuel
         </button>
         <button 
           className={`px-6 py-3 rounded-xl font-bold shadow-sm transition-all ${!useAIContent ? "bg-blue-900 text-white" : "bg-blue-50 text-blue-900"}`} 
           onClick={() => setUseAIContent(false)}
         >
-          🎨 Contenu Visuel
+           Contenu Visuel
         </button>
       </div>
 
@@ -461,7 +461,7 @@ export default function GenererPost() {
 
           <div className="flex flex-col md:flex-row gap-3 items-center mt-4">
             <label className="bg-blue-900 hover:bg-blue-950 text-white px-5 py-3 rounded-xl flex items-center gap-2 cursor-pointer shadow-sm">
-              <FiUpload size={18} /> Upload une image
+              <FiUpload size={18} /> Ajouter une image (Optionnel)
               <input
                 type="file"
                 accept="image/*"
@@ -591,7 +591,7 @@ export default function GenererPost() {
             : "bg-blue-900 text-white hover:bg-blue-950"
         }`}
       >
-        {loading ? "⏳ Génération..." : !isRecaptchaValidated ? "🔒 Valider le reCAPTCHA d'abord" : "🚀 Générer / Enregistrer"}
+        {loading ? " Génération..." : !isRecaptchaValidated ? " Valider le reCAPTCHA d'abord" : "Générer / Enregistrer"}
       </button>
 
       <div className="mt-8 space-y-4">
@@ -636,11 +636,11 @@ export default function GenererPost() {
                     </span>
                   ) : isPublished ? (
                     <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-semibold">
-                      ✅ Publié
+                       Publié
                     </span>
                   ) : (
                     <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-semibold">
-                      📝 Brouillon
+                       Brouillon
                     </span>
                   )}
                 </div>

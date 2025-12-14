@@ -104,9 +104,9 @@ const profile = {
         return (
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-10">
-              <h2 className="text-4xl font-bold text-gray-900 dark:text-gray-50 mb-4 bg-gradient-to-r from-blue-900 to-blue-600 dark:from-blue-300 dark:to-blue-500 bg-clip-text text-transparent">
-                Mon Profil
-              </h2>
+               <h2 className="text-5xl font-black tracking-tight text-blue-900 dark:text-blue-300">
+       Mon Profil
+      </h2>
               <p className="text-gray-600 dark:text-gray-400 text-lg">
                 Gérez vos informations personnelles et paramètres de compte
               </p>
